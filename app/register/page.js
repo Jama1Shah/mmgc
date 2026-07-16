@@ -34,9 +34,10 @@ export default function RegisterPage() {
     });
   };
 
-  // Helper to close the custom modal
+  // Helper to close the custom modal and refresh the page
   const closeModal = () => {
     setModal(prev => ({ ...prev, isOpen: false }));
+    window.location.reload();
   };
 
   // Trap focus and handle key events (Enter and Escape) when modal is open
