@@ -1,0 +1,568 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import BillingStaffSidebar from '@/components/BillingStaffSidebar';
+import { 
+  Menu, 
+  Search, 
+  Wallet, 
+  ClipboardCheck, 
+  Printer 
+} from 'lucide-react';
+
+export default function PaymentRecordsPage() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [appointments, setAppointments] = useState([]);
+  const [labTests, setLabTests] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    async function fetchAppointments() {
+      try {
+        const res = await fetch('/api/appointments');
+        if (res.ok) {
+          const data = await res.json();
+          setAppointments(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch appointments:", err);
+      }
+    }
+    async function fetchLabTests() {
+      try {
+        const res = await fetch('/api/lab-tests');
+        if (res.ok) {
+          const data = await res.json();
+          setLabTests(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch lab tests:", err);
+      }
+    }
+    async function fetchInvoices() {
+      try {
+        const res = await fetch('/api/billing');
+        if (res.ok) {
+          const data = await res.json();
+          setInvoices(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch invoices:", err);
+      }
+    }
+    async function fetchWards() {
+      try {
+        const res = await fetch('/api/wards');
+        if (res.ok) {
+          const data = await res.json();
+          setWards(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch wards:", err);
+      }
+    }
+    fetchAppointments();
+    fetchLabTests();
+    fetchInvoices();
+    fetchWards();
+  }, []);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const calculateAppointmentAmount = (appt) => {
+    // Rely primarily on backend calculation saved in the invoices collection
+    const matchedInvoice = invoices.find(inv => inv.appointmentId?.toString() === appt._id?.toString());
+    if (matchedInvoice) return matchedInvoice.totalAmount;
+
+    if (appt.amount) return Number(appt.amount);
+    if (appt.fee) return Number(appt.fee);
+
+    let total = 0;
+
+    let testNames = [];
+    if (appt.labTestName) {
+      testNames = appt.labTestName.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (appt.labReason) {
+      testNames = appt.labReason.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (appt.labPrescription) {
+      testNames = appt.labPrescription.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (appt.reason && appt.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i)) {
+      const labsMatch = appt.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
+      if (labsMatch && labsMatch[1].trim()) {
+        testNames = labsMatch[1].trim().split(',').map(s => s.trim().replace(/[.,\s]+$/, "")).filter(Boolean);
+      }
+    } else if (Array.isArray(appt.labTests)) {
+      testNames = appt.labTests.map(t => t.name || t.testName || t.description || (typeof t === 'string' ? t : ''));
+    }
+
+    testNames.forEach(name => {
+      if (!name) return;
+      const matchedTest = labTests.find(t => 
+        (t.name && t.name.toLowerCase() === name.toLowerCase()) ||
+        (t.description && t.description.toLowerCase() === name.toLowerCase()) ||
+        name.toLowerCase().includes(t.name?.toLowerCase() || "___") ||
+        name.toLowerCase().includes(t.description?.toLowerCase() || "___")
+      );
+      const baseCost = matchedTest ? (matchedTest.baseCost || matchedTest.cost) : 1000;
+      total += Math.round(baseCost);
+    });
+
+    const hasAdmissionDays = Number(appt.admissionDetails?.admissionDays || appt.admissionDays) > 0;
+    const requiresAdmission = appt.status === 'Admitted' || appt.admissionRequired || hasAdmissionDays;
+    if (requiresAdmission) {
+      const activeDays = Number(appt.admissionDetails?.admissionDays || appt.admissionDays) || 1;
+      const wardName = appt.admissionDetails?.wardName || appt.wardName;
+      const matchedWard = wards.find(w => w.name?.toLowerCase() === wardName?.toLowerCase());
+      const admissionFee = matchedWard ? (matchedWard.admissionFee || 0) : 0;
+      const overnightFee = matchedWard ? (matchedWard.overnightFee || 0) : 2500;
+      
+      total += admissionFee + (overnightFee * activeDays);
+    }
+
+    return total;
+  };
+
+  const handlePrintReceipt = (appt) => {
+    if (!appt) return;
+
+    // Retrieve database invoice generated by backend
+    const matchedInvoice = invoices.find(inv => 
+      inv.appointmentId?.toString() === appt._id?.toString() ||
+      inv._id?.toString() === appt.paymentId?.replace('PAY-', '')
+    );
+
+    const extractedLabTests = (() => {
+      let testNames = [];
+
+      if (appt.labTestName) {
+        testNames = appt.labTestName.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (appt.labReason) {
+        testNames = appt.labReason.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (appt.labPrescription) {
+        testNames = appt.labPrescription.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (appt.reason && appt.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i)) {
+        const labsMatch = appt.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
+        if (labsMatch && labsMatch[1].trim()) {
+          testNames = labsMatch[1].trim().split(',').map(s => s.trim().replace(/[.,\s]+$/, "")).filter(Boolean);
+        }
+      } else if (Array.isArray(appt.labTests)) {
+        return appt.labTests.map(t => {
+          const name = t.name || t.testName || t.description || (typeof t === 'string' ? t : 'Laboratory Test');
+          const matchedTest = labTests.find(lt =>
+            (lt.name && lt.name.toLowerCase() === name.toLowerCase()) ||
+            (lt.description && lt.description.toLowerCase() === name.toLowerCase()) ||
+            name.toLowerCase().includes(lt.name?.toLowerCase() || "___") ||
+            name.toLowerCase().includes(lt.description?.toLowerCase() || "___")
+          );
+          let baseCost = matchedTest ? (matchedTest.baseCost || matchedTest.cost) : 1000;
+          return {
+            name: matchedTest ? (matchedTest.name || matchedTest.description) : name,
+            cost: Math.round(baseCost)
+          };
+        });
+      }
+
+      return testNames.map(name => {
+        const matchedTest = labTests.find(lt =>
+          (lt.name && lt.name.toLowerCase() === name.toLowerCase()) ||
+          (lt.description && lt.description.toLowerCase() === name.toLowerCase()) ||
+          name.toLowerCase().includes(lt.name?.toLowerCase() || "___") ||
+          name.toLowerCase().includes(lt.description?.toLowerCase() || "___")
+        );
+        let baseCost = matchedTest ? (matchedTest.baseCost || matchedTest.cost) : 1000;
+        return {
+          name: matchedTest ? (matchedTest.name || matchedTest.description) : name,
+          cost: Math.round(baseCost)
+        };
+      });
+    })();
+
+    const breakdown = (() => {
+      if (matchedInvoice) {
+        return { doctorFee: 0, labFee: 0, admissionFee: 0, total: matchedInvoice.totalAmount || 0, isBackend: true };
+      }
+      let doctorFee = 0;
+      let labFee = extractedLabTests.reduce((sum, t) => sum + t.cost, 0);
+      let admissionFee = 0;
+
+      const hasAdmissionDays = Number(appt.admissionDetails?.admissionDays || appt.admissionDays) > 0;
+      const requiresAdmission = appt.status === 'Admitted' || appt.admissionRequired || hasAdmissionDays;
+      if (requiresAdmission) {
+        const activeDays = Number(appt.admissionDetails?.admissionDays || appt.admissionDays) || 1;
+        const wardName = appt.admissionDetails?.wardName || appt.wardName;
+        const matchedWard = wards.find(w => w.name?.toLowerCase() === wardName?.toLowerCase());
+        const wAdmissionFee = matchedWard ? (matchedWard.admissionFee || 0) : 0;
+        const wOvernightFee = matchedWard ? (matchedWard.overnightFee || 0) : 2500;
+        admissionFee = wAdmissionFee + (wOvernightFee * activeDays);
+      }
+
+      return { doctorFee, labFee, admissionFee, total: doctorFee + labFee + admissionFee };
+    })();
+
+    const refId = appt.paymentRef || appt.ref || appt.invoiceId || `INV-${appt._id?.toString().slice(-4).toUpperCase() || '5502'}`;
+
+    const printWindow = window.open('', '_blank', 'width=700,height=800');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${refId}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; color: #1e293b; padding: 40px; line-height: 1.5; }
+            .header { text-align: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 24px; margin-bottom: 24px; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 800; tracking: -0.025em; color: #0f172a; }
+            .header p { margin: 6px 0 0 0; color: #64748b; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+            .meta-box { background: #f8fafc; padding: 14px; border: 1px solid #f1f5f9; border-radius: 8px; }
+            .meta-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px; }
+            .meta-value { font-size: 13px; font-weight: 600; color: #334155; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+            .table th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+            .table td { padding: 12px 0; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+            .table td.price { text-align: right; font-weight: 600; }
+            .table th.price { text-align: right; }
+            .total-wrapper { margin-top: 24px; padding-top: 16px; border-top: 2px solid #0f172a; display: flex; justify-content: space-between; align-items: center; }
+            .total-lbl { font-size: 15px; font-weight: 700; color: #0f172a; }
+            .total-val { font-size: 20px; font-weight: 900; color: #357DF9; }
+            .footer { text-align: center; margin-top: 60px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+            @media print {
+              body { padding: 20px; }
+              .meta-box { background: #ffffff !important; border: 1px solid #cbd5e1 !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>MEDICAL BILLING RECEIPT</h1>
+            <p>Official Transaction Confirmation</p>
+          </div>
+
+          <div class="grid">
+            <div class="meta-box">
+              <div class="meta-title">Receipt Reference</div>
+              <div class="meta-value">${refId}</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-title">Date & Time</div>
+              <div class="meta-value">${formatDate(appt.paymentDate || appt.date)} / ${appt.time || 'N/A'}</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-title">Patient Account Details</div>
+              <div class="meta-value">${appt.patientName || appt.patient || "Unknown Patient"}<br/><span style="font-size:11px; font-weight:normal; color:#64748b;">${appt.patientEmail || 'No Email Registered'}</span></div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-title">Attending Clinician</div>
+              <div class="meta-value">${appt.doctorName || "N/A"}<br/><span style="font-size:11px; font-weight:normal; color:#64748b;">${appt.specialty || 'General Medicine'}</span></div>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Service Line Description</th>
+                <th class="price">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${breakdown.isBackend && matchedInvoice ? 
+                (matchedInvoice.items || []).map(item => `
+                  <tr>
+                    <td>${item.description}</td>
+                    <td class="price">PKR ${(item.cost || 0).toLocaleString()}</td>
+                  </tr>
+                `).join('')
+                : `
+                  ${breakdown.doctorFee > 0 ? `
+                  <tr>
+                    <td>General OPD Consultation Fee</td>
+                    <td class="price">PKR ${breakdown.doctorFee.toLocaleString()}</td>
+                  </tr>
+                  ` : ''}
+                  ${extractedLabTests.map(test => `
+                  <tr>
+                    <td>Laboratory Diagnostics Fee (${test.name})</td>
+                    <td class="price">PKR ${test.cost.toLocaleString()}</td>
+                  </tr>
+                  `).join('')}
+                  ${breakdown.admissionFee > 0 ? (() => {
+                    const wardName = appt.admissionDetails?.wardName || appt.wardName || "Inpatient Ward";
+                    const activeDays = Number(appt.admissionDetails?.admissionDays || appt.admissionDays) || 1;
+                    return `
+                    <tr>
+                      <td>Ward Admission Charges (${wardName}, ${activeDays} Day(s))</td>
+                      <td class="price">PKR ${breakdown.admissionFee.toLocaleString()}</td>
+                    </tr>
+                    `;
+                  })() : ''}
+                `
+              }
+              ${(() => {
+                const hasAdmissionDays = Number(appt.admissionDetails?.admissionDays || appt.admissionDays) > 0;
+                const requiresAdmission = appt.status === 'Admitted' || appt.admissionRequired || hasAdmissionDays;
+                if (requiresAdmission) {
+                  const wardName = appt.admissionDetails?.wardName || appt.wardName || "N/A";
+                  const matchedWard = wards.find(w => w.name?.toLowerCase() === wardName.toLowerCase());
+                  const wOvernightFee = matchedWard ? (matchedWard.overnightFee || 0) : 2500;
+                  return `
+                  <tr>
+                    <td style="color: #64748b; font-size: 13px;">Ward Daily Fee (Reference)</td>
+                    <td class="price" style="color: #64748b; font-size: 13px; font-weight: normal;">PKR ${wOvernightFee.toLocaleString()} / day</td>
+                  </tr>
+                  `;
+                }
+                return '';
+              })()}
+            </tbody>
+          </table>
+
+          <div class="total-wrapper">
+            <div class="total-lbl">Total Paid Amount (via ${appt.paymentMethod || appt.method || "Cash"})</div>
+            <div class="total-val">PKR ${breakdown.total.toLocaleString()}</div>
+          </div>
+
+          <div class="footer">
+            <p>Thank you for choosing our hospital medical network.</p>
+            <p>This document is digitally validated and serves as a verified source of account settlement.</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const completedAppointments = appointments.filter(appt => appt.status === 'Bill Pending' || appt.status === 'Completed');
+
+  const pendingInvoices = completedAppointments
+    .filter(appt => {
+      const dbInvoice = invoices.find(inv => inv.appointmentId === appt._id);
+      if (!dbInvoice) return false; 
+      return dbInvoice.status !== 'Paid';
+    })
+    .map((appt) => {
+      const totalCost = calculateAppointmentAmount(appt);
+      return {
+        id: appt.invoiceId || `INV-${appt._id?.toString().slice(-4).toUpperCase() || '5502'}`,
+        patient: appt.patientName || appt.patient || "Unknown Patient",
+        amount: `PKR ${totalCost.toLocaleString()}`,
+        dueDate: formatDate(appt.dueDate || appt.date),
+        _originalAppt: appt
+      };
+    });
+
+  const paymentRecords = invoices
+    .filter(inv => inv.status === 'Paid')
+    .map((inv) => {
+      const matchedAppt = appointments.find(a => 
+        a._id?.toString() === inv.appointmentId?.toString()
+      );
+      
+      const generatedRef = matchedAppt?.invoiceId || (matchedAppt?._id ? `INV-${matchedAppt._id.toString().slice(-4).toUpperCase()}` : `INV-${inv.appointmentId?.toString().slice(-4).toUpperCase() || '5502'}`);
+
+      return {
+        id: `PAY-${inv._id?.toString().slice(-4).toUpperCase() || '9901'}`,
+        patient: inv.patientName || matchedAppt?.patientName || "Unknown Patient",
+        amount: `PKR ${(inv.totalAmount || 0).toLocaleString()}`,
+        method: inv.method || "Cash",
+        date: formatDate(inv.date),
+        ref: generatedRef,
+        _originalAppt: matchedAppt ? { ...matchedAppt, paymentId: `PAY-${inv._id?.toString().slice(-4).toUpperCase() || '9901'}`, ref: generatedRef } : { 
+          patientName: inv.patientName,
+          paymentMethod: inv.method,
+          paymentDate: inv.date,
+          _id: inv.appointmentId,
+          paymentId: `PAY-${inv._id?.toString().slice(-4).toUpperCase() || '9901'}`,
+          ref: generatedRef
+        }
+      };
+    })
+    .filter((rec) => {
+      const query = searchQuery.toLowerCase();
+      return rec.patient.toLowerCase().includes(query) || 
+             rec.id.toLowerCase().includes(query) || 
+             rec.ref.toLowerCase().includes(query);
+    });
+
+  const todayFormatted = formatDate(new Date().toISOString().split('T')[0]);
+  const todayCollectionsValue = invoices
+    .filter(inv => inv.status === 'Paid' && formatDate(inv.date) === todayFormatted)
+    .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+  const todayCollections = `PKR ${todayCollectionsValue.toLocaleString()}`;
+
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      <BillingStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+
+      <main className="flex-1 w-full flex flex-col">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-10 py-6 top-0 z-40 flex flex-col gap-4">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Payment Records</h1>
+                <p className="text-slate-500 text-xs sm:text-sm mt-1">Audit log of all completed transactions.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Quick search..." 
+                  className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-4 sm:p-6 lg:p-10 max-w-[1400px] mx-auto w-full space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center group hover:border-[#357DF9] transition-colors">
+              <div>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Today's Collections (Cash)</p>
+                <p className="text-3xl font-black text-slate-800 mt-1">{todayCollections}</p>
+              </div>
+              <div className="bg-emerald-50 p-4 rounded-xl text-emerald-600">
+                <Wallet size={24} />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center group hover:border-[#357DF9] transition-colors">
+              <div>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Cash Transaction Count</p>
+                <p className="text-3xl font-black text-slate-800 mt-1">{paymentRecords.length} Record{paymentRecords.length === 1 ? '' : 's'}</p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-xl text-[#357DF9]">
+                <ClipboardCheck size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className="md:hidden relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search Ref ID or Patient..." 
+              className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:hidden">
+            {paymentRecords.length === 0 ? (
+              <p className="text-slate-400 text-sm py-4 text-center">No payment records found matching query criteria.</p>
+            ) : (
+              paymentRecords.map((record) => (
+                <div key={record.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Ref: {record.ref}</span>
+                      <h3 className="font-bold text-slate-800">Summary</h3>
+                    </div>
+                    <p className="text-lg font-black text-emerald-600">{record.amount}</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-3 border-y border-slate-50">
+                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded capitalize">{record.method}</span>
+                    <span className="text-xs text-slate-400">{record.date}</span>
+                  </div>
+
+                  <button 
+                    onClick={() => handlePrintReceipt(record._originalAppt)}
+                    className="w-full mt-4 flex items-center justify-center gap-2 py-2 text-[#357DF9] font-bold text-sm bg-blue-50/50 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
+                  >
+                    <Printer size={14} /> Print Receipt
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-lg">Transaction History (Cash Only)</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-widest font-black">
+                  <tr>
+                    <th className="px-8 py-4">Ref ID</th>
+                    <th className="px-8 py-4">Patient</th>
+                    <th className="px-8 py-4">Amount</th>
+                    <th className="px-8 py-4">Method</th>
+                    <th className="px-8 py-4">Date</th>
+                    <th className="px-8 py-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paymentRecords.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-8 py-10 text-center text-slate-400 text-sm font-semibold">
+                        No matching completed transaction records found.
+                      </td>
+                    </tr>
+                  ) : (
+                    paymentRecords.map((record) => (
+                      <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-8 py-5 text-sm font-bold text-slate-700">{record.ref}</td>
+                        <td className="px-8 py-5 text-sm text-slate-600 font-bold group-hover:text-[#357DF9] transition-colors">{record.patient}</td>
+                        <td className="px-8 py-5 text-sm text-emerald-600 font-black">{record.amount}</td>
+                        <td className="px-8 py-5">
+                          <span className="bg-slate-50 border border-slate-100 px-2 py-1 rounded text-[10px] font-black text-slate-500 uppercase tracking-tight">
+                            {record.method}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-sm text-slate-400">{record.date}</td>
+                        <td className="px-8 py-5 text-right">
+                          <button 
+                            onClick={() => handlePrintReceipt(record._originalAppt)}
+                            className="text-[#357DF9] font-black text-xs uppercase flex items-center gap-2 ml-auto hover:underline"
+                          >
+                            <Printer size={12} /> Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+const StatCard = ({ label, val, icon, border }) => (
+  <div className={`bg-white p-6 rounded-2xl border-l-4 ${border} shadow-sm border border-slate-200 flex justify-between items-start`}>
+    <div>
+      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{label}</p>
+      <p className="text-3xl font-black text-slate-800 mt-2">{val}</p>
+    </div>
+    <div className="p-2 bg-slate-50 rounded-lg">{icon}</div>
+  </div>
+);

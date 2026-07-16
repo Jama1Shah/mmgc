@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #1D1E20; 
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #333438;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #357DF9; /* Turns blue when you hover over the scrollbar */
+  }
+
+  /* Firefox support */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #333438 #1D1E20;
+  }
+}
+
+.dark-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.dark-scroll::-webkit-scrollbar-track {
+  background: #1D1E20;
+}
+.dark-scroll::-webkit-scrollbar-thumb {
+  background: #333438;
+  border-radius: 10px;
+}
+.dark-scroll::-webkit-scrollbar-thumb:hover {
+  background: #357DF9;
+}
+
+* {
+  /* Use a clean, modern font stack for a clinical feel */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+  
+  /* Firefox Scrollbar Support */
+  scrollbar-width: thin;
+  scrollbar-color: rgb(185, 185, 185) #f8fafc; /* Slate-300 and Slate-50 to match your dashboard */
+  scroll-behavior: smooth; /* Smooth scrolling for the dashboard lists */
+}
+
+/* Webkit (Chrome, Safari, Edge) Scrollbar Support */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc; /* Matches your bg-slate-50 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Matches slate-300 */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6; /* Changes to Blue-500 on hover */
+}
+
+/* Smooth scrolling for the dashboard lists */
+html {
+  scroll-behavior: smooth;
+}
