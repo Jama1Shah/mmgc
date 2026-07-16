@@ -3,6 +3,7 @@ import "./globals.css";
 import Footer from "@/components/Footer";
 import AuthProvider from "@/components/AuthProvider";
 import TabCookieSync from "@/components/TabCookieSync";
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,9 @@ export default function RootLayout({ children }) {
         <footer>
           <Footer />
         </footer>
+
+        {/* Vercel Analytics tracking */}
+        <Analytics />
       </body>
     </html>
   );

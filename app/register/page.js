@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
@@ -16,6 +16,44 @@ export default function RegisterPage() {
     agreeToTerms: false
   });
 
+  // Custom modal state
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info' // 'success', 'error', 'warning', 'info'
+  });
+
+  // Helper to open our custom modal
+  const showAlert = (title, message, type = 'info') => {
+    setModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  // Helper to close the custom modal
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Trap focus and handle key events (Enter and Escape) when modal is open
+  useEffect(() => {
+    if (!modal.isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modal.isOpen]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -26,7 +64,7 @@ export default function RegisterPage() {
 
   const handleResendVerification = async () => {
     if (!formData.email) {
-      alert("Please enter your email address first to resend the verification link.");
+      showAlert("Email Required", "Please enter your email address first to resend the verification link.", "warning");
       return;
     }
 
@@ -40,13 +78,13 @@ export default function RegisterPage() {
 
       const result = await response.json();
       if (response.ok) {
-        alert(result.message || "Verification email resent successfully! Please check your inbox.");
+        showAlert("Success", result.message || "Verification email resent successfully! Please check your inbox.", "success");
       } else {
-        alert(result.error || "Failed to resend verification email.");
+        showAlert("Failed", result.error || "Failed to resend verification email.", "error");
       }
     } catch (error) {
       console.error("Connection error:", error);
-      alert("Could not connect to the server to resend verification.");
+      showAlert("Connection Error", "Could not connect to the server to resend verification.", "error");
     } finally {
       setIsResending(false);
     }
@@ -57,7 +95,7 @@ export default function RegisterPage() {
 
     // 1. Validation check
     if (!formData.agreeToTerms) {
-      alert("Please agree to the Terms of Services.");
+      showAlert("Terms of Service", "Please agree to the Terms of Services.", "warning");
       return;
     }
 
@@ -84,15 +122,15 @@ export default function RegisterPage() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(result.message || "Registration successful! Please check your email inbox to verify your account before logging in.");
+        showAlert("Registration Successful", result.message || "Registration successful! Please check your email inbox to verify your account before logging in.", "success");
         // window.location.href = '/login'; 
       } else {
         // Use result.error because that's what your route.js returns
-        alert(result.error || "Something went wrong");
+        showAlert("Registration Failed", result.error || "Something went wrong", "error");
       }
     } catch (error) {
       console.error("Connection error:", error);
-      alert("Could not connect to the server. Check your terminal for DB errors.");
+      showAlert("Connection Error", "Could not connect to the server. Check your terminal for DB errors.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -245,6 +283,67 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom UI Modal */}
+      {modal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Backdrop Blur overlay */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
+            onClick={closeModal}
+          />
+          {/* Modal Container */}
+          <div className="relative bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 flex flex-col items-center text-center transform scale-100 transition-all duration-200">
+            
+            {/* Success Icon */}
+            {modal.type === 'success' && (
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+
+            {/* Error Icon */}
+            {modal.type === 'error' && (
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            )}
+
+            {/* Warning Icon */}
+            {modal.type === 'warning' && (
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            )}
+
+            {/* Info Icon */}
+            {modal.type === 'info' && (
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            )}
+
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{modal.title}</h3>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">{modal.message}</p>
+
+            <button
+              type="button"
+              onClick={closeModal}
+              className="w-full bg-[#357DF9] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all shadow-md shadow-blue-500/10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
