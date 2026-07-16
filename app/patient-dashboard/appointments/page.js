@@ -204,6 +204,7 @@ const AppointmentsPage = () => {
 
     return (
         <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+            <title>Appointments - MMGC</title>
             <PatientSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
             <main className="flex-1 p-6 md:p-12 overflow-y-auto w-full">

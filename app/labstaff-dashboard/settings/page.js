@@ -136,6 +136,7 @@ export default function LabStaffSettings() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex relative">
+            <title>Settings - MMGC</title>
             <LabStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
             <main className="flex-1 w-full flex flex-col">

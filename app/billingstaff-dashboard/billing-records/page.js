@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import BillingStaffSidebar from '@/components/BillingStaffSidebar';
 import { 
   Menu, 
@@ -404,6 +403,7 @@ export default function PaymentRecordsPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <title>Payment Records - MMGC</title>
       <BillingStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 w-full flex flex-col">

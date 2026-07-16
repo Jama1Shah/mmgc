@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 export default function AboutPage() {
   return (
     <div>
+      <title>About - MMGC</title>
       <header className="sticky top-0 z-50">
           <Navbar />
         </header>

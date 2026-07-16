@@ -7,6 +7,7 @@ export default function UnauthorizedPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 font-sans">
+      <title>Unauthorized - MMGC</title>
       <div className="max-w-md w-full bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-100/50 p-8 text-center transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40">
         
         {/* Shield Icon Graphic */}

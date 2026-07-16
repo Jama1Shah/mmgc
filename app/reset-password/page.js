@@ -103,6 +103,7 @@ function ResetPasswordForm() {
 
   return (
     <div className="max-w-md w-full mx-auto relative">
+      <title>Reset Password - MMGC</title>
       <div className="mb-10 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Set New Password</h1>
         <p className="text-gray-500 mt-2">Please enter your new secure password details below.</p>

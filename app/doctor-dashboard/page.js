@@ -630,6 +630,7 @@ const StatCard = ({ label, value, trend, color }) => {
   };
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+      <title>Dashboard - MMGC</title>
       <div className={`inline-flex p-2 rounded-lg mb-4 ${colorMap[color]}`}><Activity size={18} /></div>
       <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{label}</p>
       <div className="flex items-end justify-between mt-2">

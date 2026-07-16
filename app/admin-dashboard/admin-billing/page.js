@@ -273,6 +273,7 @@ export default function AdminBillingPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <title>Billing - MMGC</title>
       <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 w-full flex flex-col">

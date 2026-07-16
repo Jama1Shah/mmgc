@@ -784,6 +784,7 @@ export default function MasterNurseDashboard() {
 
                       return (
                         <div key={p._id} className="p-5 flex flex-col space-y-3">
+                          <title>Dashboard - MMGC</title>
                           <div className="flex items-center justify-between w-full">
                             <div className="text-left">
                               <h4 className="font-bold text-slate-800 text-sm">{p.patientName}</h4>

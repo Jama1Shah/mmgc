@@ -245,6 +245,7 @@ export default function AssignLabTestPage() {
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-slate-900 overflow-hidden">
+      <title>Assign Lab Test - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <div className="flex-1 flex flex-col overflow-y-auto">
         <Navbar />

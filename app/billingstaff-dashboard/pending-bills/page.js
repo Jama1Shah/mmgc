@@ -301,6 +301,7 @@ export default function PendingInvoicesPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <title>Pending Bills - MMGC</title>
       <BillingStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 w-full flex flex-col">

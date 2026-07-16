@@ -140,10 +140,10 @@ export default function RegisterPage() {
   return (
     <div>
       <header className="sticky top-0 z-50">
+      <title>Register - MMGC</title>
         <Navbar />
       </header>
       <div className="min-h-screen bg-white font-['DM_Sans',sans-serif] text-[#1D1E20]">
-        <title>Register - MMGC</title>
 
         <div className="flex min-h-screen">
           {/* Left Side: Form Container */}

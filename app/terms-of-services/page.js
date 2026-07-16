@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 export default function TermsOfService() {
   return (
     <div className="flex flex-col min-h-screen">
+      <title>Terms of Services - MMGC</title>
       <header className="sticky top-0 z-50">
         <Navbar />
       </header>

@@ -308,6 +308,7 @@ const LabAnalyticsContent = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
+     <title>Lab Analytics - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 max-w-5xl mx-auto w-full">

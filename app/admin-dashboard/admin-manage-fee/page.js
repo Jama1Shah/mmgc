@@ -291,6 +291,7 @@ export default function AdminManagementPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <title>Manage Fees - MMGC</title>
       <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       
       <main className="flex-1 w-full flex flex-col p-6 md:p-10 font-sans">

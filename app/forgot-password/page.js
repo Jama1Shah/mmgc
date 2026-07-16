@@ -67,6 +67,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div>
+      <title>Forgot Password - MMGC</title>
       <header className="sticky top-0 z-50"><Navbar /></header>
       <div className="min-h-screen bg-white font-['DM_Sans',sans-serif] text-[#1D1E20] flex flex-col justify-center px-8 py-12">
         <title>Forgot Password - MMGC Healthcare</title>

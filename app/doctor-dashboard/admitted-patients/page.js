@@ -721,6 +721,7 @@ export default function DoctorAdmittedDashboard() {
                             
                             return (
                               <>
+                              <title>Admitted Patients - MMGC</title>
                                 {textLogsArray.length > 0 ? (
                                   <div className="space-y-1.5">
                                     {textLogsArray.map((t, idx) => (

@@ -412,7 +412,7 @@ export default function BillingOverviewPage() {
                     const wOvernightFee = matchedWard ? (matchedWard.overnightFee || 0) : 2500;
                     return (
                       <>
-
+<title>Dashboard - MMGC</title>
                         <div className="flex justify-between text-xs text-slate-600 border-t border-slate-100 pt-1 mt-1">
                           <span>Total Admission Days</span>
                           <span className="font-bold text-slate-700">

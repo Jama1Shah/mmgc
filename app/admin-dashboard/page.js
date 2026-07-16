@@ -175,6 +175,7 @@ export default function UserManagement() {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+      <title>Dashboard - MMGC</title>
       <AdminSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 min-w-0">

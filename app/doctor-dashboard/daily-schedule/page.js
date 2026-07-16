@@ -384,6 +384,7 @@ const DailySchedule = () => {
                               isAdmittedPatient ? 'border-indigo-100 bg-gradient-to-r from-indigo-50/20 to-transparent' : 'border-slate-200'
                             }`}
                           >
+                            <title>Daily Schedule - MMGC</title>
                             <div className="flex items-center space-x-4 md:space-x-6 w-full md:w-auto">
                               {/* Time Badge */}
                               <div className={`p-3 rounded-xl border flex flex-col items-center min-w-[95px] transition-colors ${
