@@ -327,7 +327,7 @@ const LabAnalyticsContent = () => {
                 if (record?.labStatus !== 'Completed') {
                   setIsPrescriptionWarningOpen(true);
                 } else {
-                  router.push(`/prescriptions?${prescriptionQueryParams.toString()}`);
+                  router.push(`/doctor-prescription/prescriptions?${prescriptionQueryParams.toString()}`);
                 }
               }}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all border border-transparent hover:scale-[1.02]"
