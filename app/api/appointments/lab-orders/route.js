@@ -34,6 +34,85 @@ async function fileToStoredUrl(file, id) {
 }
 
 // ========================================================
+// HELPER: Turn a raw stored data: URI into a short, stable,
+// browser-navigable link (e.g. /api/appointments/lab-orders?fileId=...).
+// Handing the browser a multi-MB data: URI directly (previous approach)
+// is what caused "needs a refresh" on desktop and mobile browsers
+// bouncing out to another app — mobile browsers in particular don't
+// reliably open data: URIs in a normal tab. A real HTTP URL with a
+// GET handler behind it (see the 'fileId' branch below) fixes both.
+// ========================================================
+function buildFileProxyUrl(appointmentId, testName, idx) {
+  if (testName !== undefined && idx !== undefined) {
+    return `/api/appointments/lab-orders?fileId=${appointmentId}&test=${encodeURIComponent(testName || '')}&idx=${idx}`;
+  }
+  return `/api/appointments/lab-orders?fileId=${appointmentId}`;
+}
+
+function transformFileUrlsForResponse(labFileUrlRaw, appointmentId) {
+  if (!labFileUrlRaw) return labFileUrlRaw;
+
+  // Structured multi-test file array: [{ testName, urls: [...] }]
+  if (labFileUrlRaw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(labFileUrlRaw);
+      if (Array.isArray(parsed)) {
+        const transformed = parsed.map(entry => {
+          if (!entry || !Array.isArray(entry.urls)) return entry;
+          const urls = entry.urls.map((u, idx) => {
+            // Only proxy genuine embedded data URIs; leave any legacy
+            // '/uploads/...' paths or already-proxied links untouched.
+            if (typeof u === 'string' && u.startsWith('data:')) {
+              return buildFileProxyUrl(appointmentId, entry.testName, idx);
+            }
+            return u;
+          });
+          return { ...entry, urls };
+        });
+        return JSON.stringify(transformed);
+      }
+    } catch (e) {
+      return labFileUrlRaw;
+    }
+    return labFileUrlRaw;
+  }
+
+  // Single embedded data URI
+  if (labFileUrlRaw.startsWith('data:')) {
+    return buildFileProxyUrl(appointmentId);
+  }
+
+  // Legacy plain path (pre-existing records) — leave untouched
+  return labFileUrlRaw;
+}
+
+// ========================================================
+// HELPER: Decode a stored data: URI back into raw bytes + mime type
+// so it can be streamed back as a normal HTTP response.
+// ========================================================
+function decodeStoredDataUri(dataUri) {
+  const commaIdx = dataUri.indexOf(',');
+  if (commaIdx === -1) return null;
+
+  const meta = dataUri.substring(5, commaIdx); // e.g. "application/pdf;base64"
+  const mimeType = (meta.split(';')[0] || 'application/octet-stream').trim();
+
+  let rest = dataUri.substring(commaIdx + 1); // base64 data, possibly with '#filename' suffix
+  let originalFilename = 'download';
+  const hashIdx = rest.indexOf('#');
+  if (hashIdx !== -1) {
+    originalFilename = decodeURIComponent(rest.substring(hashIdx + 1)) || originalFilename;
+    rest = rest.substring(0, hashIdx);
+  }
+
+  return {
+    buffer: Buffer.from(rest, 'base64'),
+    mimeType,
+    originalFilename
+  };
+}
+
+// ========================================================
 // 1. GET: FETCH ACTIVE LAB WORKSPACE OR ARCHIVED RECORDS
 // ========================================================
 export async function GET(req) {
@@ -41,6 +120,58 @@ export async function GET(req) {
     await mmgc_db();
 
     const { searchParams } = new URL(req.url);
+
+    // ========================================================
+    // FILE STREAMING MODE: resolve a proxy link (?fileId=...) back into
+    // the actual file bytes with real headers, instead of ever handing
+    // the browser a raw data: URI. Handled first and returned early so
+    // it bypasses the workspace-listing query validation below.
+    // ========================================================
+    const fileId = searchParams.get('fileId');
+    if (fileId) {
+      const app = await Appointment.findById(fileId);
+      if (!app) {
+        return NextResponse.json({ error: "File record not found" }, { status: 404 });
+      }
+
+      const testName = searchParams.get('test');
+      const idxParam = searchParams.get('idx');
+      let dataUri = '';
+
+      if (testName !== null && idxParam !== null) {
+        // Structured multi-test lookup
+        let filesArray = [];
+        if (app.labFileUrl && app.labFileUrl.startsWith('[')) {
+          try { filesArray = JSON.parse(app.labFileUrl); } catch (e) { }
+        }
+        const idx = parseInt(idxParam, 10);
+        const entry = filesArray.find(f => f.testName === testName);
+        if (entry && Array.isArray(entry.urls) && entry.urls[idx]) {
+          dataUri = entry.urls[idx];
+        }
+      } else if (app.labFileUrl && !app.labFileUrl.startsWith('[')) {
+        // Single-file lookup
+        dataUri = app.labFileUrl;
+      }
+
+      if (!dataUri || !dataUri.startsWith('data:')) {
+        return NextResponse.json({ error: "Requested file could not be located" }, { status: 404 });
+      }
+
+      const decoded = decodeStoredDataUri(dataUri);
+      if (!decoded) {
+        return NextResponse.json({ error: "Stored file data is corrupted" }, { status: 500 });
+      }
+
+      return new NextResponse(decoded.buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': decoded.mimeType,
+          'Content-Disposition': `inline; filename="${decoded.originalFilename}"`,
+          'Cache-Control': 'private, max-age=3600'
+        }
+      });
+    }
 
     // Validate incoming workspace state tokens
     const rawParams = Object.fromEntries(searchParams.entries());
@@ -58,7 +189,9 @@ export async function GET(req) {
       if (!app) {
         return NextResponse.json({ error: "Appointment trace index context not found" }, { status: 404 });
       }
-      return NextResponse.json(app, { status: 200 });
+      const appObj = app.toObject();
+      appObj.labFileUrl = transformFileUrlsForResponse(appObj.labFileUrl, app._id.toString());
+      return NextResponse.json(appObj, { status: 200 });
     }
 
     // Base query targeting laboratory workflows
@@ -139,7 +272,7 @@ export async function GET(req) {
         test: extractedTest,
         labStatus: app.labStatus || 'Pending',
         labNotes: extractedNotes,
-        labFileUrl: extractedFileUrl,
+        labFileUrl: transformFileUrlsForResponse(extractedFileUrl, app._id.toString()),
         date: app.date || '',
         time: app.time || ''
       };
@@ -357,7 +490,10 @@ export async function PATCH(req) {
       );
     }
 
-    return NextResponse.json({ success: true, data: updatedRecord }, { status: 200 });
+    const updatedRecordObj = updatedRecord.toObject();
+    updatedRecordObj.labFileUrl = transformFileUrlsForResponse(updatedRecordObj.labFileUrl, id);
+
+    return NextResponse.json({ success: true, data: updatedRecordObj }, { status: 200 });
   } catch (error) {
     console.error("Failed to commit operational status mutation:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
