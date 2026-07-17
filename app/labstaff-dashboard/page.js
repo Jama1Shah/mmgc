@@ -600,40 +600,11 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
   const pendingTests = allTests.filter(test => !completedTestNames.includes(test.trim()));
   const displayTestName = pendingTests.length > 0 ? pendingTests.join(', ') : order.test;
 
-  // Intercepts direct links to build a clean HTML document shell carrying the original site favicon and cache buster
+  // Opens the uploaded document directly in a new tab with a cache-busting timestamp to prevent stale 404 rendering
   const handleOpenDocument = (e, fileUrl, testName) => {
     e.preventDefault();
-    if (!fileUrl) return;
-
-    // Safely parse or configure the fully qualified domain root origin
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const absoluteUrl = fileUrl.startsWith('http') ? fileUrl : `${origin}${fileUrl}`;
-    const cacheBustedUrl = `${absoluteUrl}?t=${Date.now()}`;
-    const faviconUrl = `${origin}/favicon.ico`;
-    const title = testName ? `Report - ${testName} - MMGC` : 'Laboratory Report - MMGC';
-    
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-      newWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>${title}</title>
-            <base href="${origin}">
-            <link rel="icon" href="${faviconUrl}" type="image/x-icon" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F8FAFC; }
-              iframe { width: 100%; height: 100%; border: none; }
-            </style>
-          </head>
-          <body>
-            <iframe src="${cacheBustedUrl}"></iframe>
-          </body>
-        </html>
-      `);
-      newWindow.document.close();
-    }
+    const cacheBustedUrl = `${fileUrl}?t=${Date.now()}`;
+    window.open(cacheBustedUrl, '_blank');
   };
 
   return (
