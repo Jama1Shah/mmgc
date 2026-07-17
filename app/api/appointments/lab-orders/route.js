@@ -22,64 +22,6 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
 
-    // Dynamic Isolated Document Viewer Mode: Intercepts raw uploads to append favicons and security headers
-    const fileToView = searchParams.get('viewFile');
-    if (fileToView) {
-      const decodedPath = decodeURIComponent(fileToView);
-      if (!decodedPath.startsWith('/uploads/')) {
-        return new NextResponse("Access Denied: Invalid path boundary context.", { status: 403 });
-      }
-
-      const isPdf = decodedPath.toLowerCase().endsWith('.pdf');
-      const pageTitle = isPdf ? "Lab Diagnosis Report (PDF) — MMGC" : "Lab Diagnostics Attachment View — MMGC";
-
-      const inspectorHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${pageTitle}</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
-  <style>
-    body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #F8FAFC; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { display: flex; flex-direction: column; height: 100%; width: 100%; }
-    .header { background-color: #ffffff; border-bottom: 1px solid #E2E8F0; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 50; }
-    .title-area { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #1E293B; }
-    .btn-download { background-color: #357DF9; color: #ffffff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; box-shadow: 0 1px 2px rgba(53, 125, 249, 0.2); }
-    .btn-download:hover { background-color: #1E66E2; }
-    .content-frame { flex: 1; width: 100%; height: 100%; border: none; }
-    .image-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; padding: 32px; }
-    .image-element { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border-radius: 12px; background: #ffffff; border: 1px solid #E2E8F0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="title-area">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#357DF9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        MMGC Medical Portal — Secure Document Inspector
-      </div>
-      <a href="${decodedPath}" download class="btn-download">Download Document</a>
-    </div>
-    ${isPdf 
-      ? `<iframe src="${decodedPath}" class="content-frame"></iframe>` 
-      : `<div class="image-wrapper"><img src="${decodedPath}" class="image-element" alt="Medical Document Log Asset" /></div>`
-    }
-  </div>
-</body>
-</html>`;
-
-      return new NextResponse(inspectorHtml, {
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'SAMEORIGIN',
-          'Content-Security-Policy': "default-src 'self' 'unsafe-inline' data: blob:; frame-src 'self' data: blob:; img-src 'self' data: blob:;"
-        }
-      });
-    }
-
     // Validate incoming workspace state tokens
     const rawParams = Object.fromEntries(searchParams.entries());
     const validation = getLabWorkspaceQuerySchema.safeParse(rawParams);
@@ -234,8 +176,6 @@ export async function PATCH(req) {
 
       if (structuredTestsStr) {
         const structuredTests = JSON.parse(structuredTestsStr);
-        const uploadDir = join(process.cwd(), 'public', 'uploads');
-        await mkdir(uploadDir, { recursive: true });
 
         // Retrieve the current data to avoid redoing or overwriting previous metrics
         const existingApp = await Appointment.findById(id);
@@ -265,12 +205,10 @@ export async function PATCH(req) {
               const bytes = await file.arrayBuffer();
               const buffer = Buffer.from(bytes);
 
-              // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
-              const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-
-              const uploadPath = join(uploadDir, filename);
-              await writeFile(uploadPath, buffer);
-              savedUrls.push(`/uploads/${filename}`);
+              // ✅ FIX: Process as safe Serverless Base64 Data URI to prevent write crashes
+              const base64Data = buffer.toString('base64');
+              const mimeType = file.type || 'application/octet-stream';
+              savedUrls.push(`data:${mimeType};base64,${base64Data}`);
             }
           }
 
@@ -303,13 +241,11 @@ export async function PATCH(req) {
         if (file && typeof file !== 'string' && file.name) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
-          // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
-          const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const uploadDir = join(process.cwd(), 'public', 'uploads');
-          await mkdir(uploadDir, { recursive: true });
-          const uploadPath = join(uploadDir, filename);
-          await writeFile(uploadPath, buffer);
-          savedFilePath = `/uploads/${filename}`;
+          
+          // ✅ FIX: Process as safe Serverless Base64 Data URI to prevent write crashes
+          const base64Data = buffer.toString('base64');
+          const mimeType = file.type || 'application/octet-stream';
+          savedFilePath = `data:${mimeType};base64,${base64Data}`;
         }
       }
     }

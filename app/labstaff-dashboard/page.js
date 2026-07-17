@@ -649,11 +649,12 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
                     {matchingFilesObj && matchingFilesObj.urls && matchingFilesObj.urls.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1.5 border-t border-gray-100 mt-1.5">
                         {matchingFilesObj.urls.map((url, uIdx) => {
-                          const isPdf = url.toLowerCase().endsWith('.pdf');
+                          {/* ✅ FIX: Support matching PDF data-URIs seamlessly along with regular static files */}
+                          const isPdf = url.toLowerCase().endsWith('.pdf') || url.startsWith('data:application/pdf');
                           return (
                             <a 
                               key={uIdx}
-                              href={`/api/appointments/lab-orders?viewFile=${encodeURIComponent(url)}`} 
+                              href={url} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="text-[10px] text-[#357DF9] hover:underline flex items-center gap-0.5 bg-blue-50 px-1.5 py-0.5 rounded font-semibold"
@@ -675,12 +676,13 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
               )}
               {attachmentUrlsArray.length === 0 && order.labFileUrl && !order.labFileUrl.startsWith('[') && (
                 <a 
-                  href={`/api/appointments/lab-orders?viewFile=${encodeURIComponent(order.labFileUrl)}`} 
+                  href={order.labFileUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-[11px] text-gray-400 hover:text-[#357DF9] flex items-center gap-0.5 underline transition-colors font-medium self-end"
                 >
-                  {order.labFileUrl.toLowerCase().endsWith('.pdf') ? 'View PDF' : 'View File'} <ExternalLink size={10} />
+                  {/* ✅ FIX: Support matching PDF data-URIs seamlessly along with regular static files */}
+                  {order.labFileUrl.toLowerCase().endsWith('.pdf') || order.labFileUrl.startsWith('data:application/pdf') ? 'View PDF' : 'View File'} <ExternalLink size={10} />
                 </a>
               )}
             </div>
