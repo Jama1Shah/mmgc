@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import mmgc_db from '@/lib/mmgc_db';
 import Appointment from '@/models/Appointment';
 import mongoose from 'mongoose';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
 import {
   getLabWorkspaceQuerySchema,
   updateLabStatusSchema,
@@ -174,6 +176,8 @@ export async function PATCH(req) {
 
       if (structuredTestsStr) {
         const structuredTests = JSON.parse(structuredTestsStr);
+        const uploadDir = join(process.cwd(), 'public', 'uploads');
+        await mkdir(uploadDir, { recursive: true });
 
         // Retrieve the current data to avoid redoing or overwriting previous metrics
         const existingApp = await Appointment.findById(id);
@@ -203,10 +207,12 @@ export async function PATCH(req) {
               const bytes = await file.arrayBuffer();
               const buffer = Buffer.from(bytes);
 
-              // ✅ FIX FOR VERCEL: Convert directly to a Base64 Data URL to bypass read-only disk limitations
-              const mimeType = file.type || 'application/octet-stream';
-              const base64DataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
-              savedUrls.push(base64DataUrl);
+              // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
+              const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+              const uploadPath = join(uploadDir, filename);
+              await writeFile(uploadPath, buffer);
+              savedUrls.push(`/uploads/${filename}`);
             }
           }
 
@@ -239,10 +245,13 @@ export async function PATCH(req) {
         if (file && typeof file !== 'string' && file.name) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
-          
-          // ✅ FIX FOR VERCEL: Convert single-file fallbacks to Base64 Data URLs seamlessly
-          const mimeType = file.type || 'application/octet-stream';
-          savedFilePath = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
+          const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const uploadDir = join(process.cwd(), 'public', 'uploads');
+          await mkdir(uploadDir, { recursive: true });
+          const uploadPath = join(uploadDir, filename);
+          await writeFile(uploadPath, buffer);
+          savedFilePath = `/uploads/${filename}`;
         }
       }
     }

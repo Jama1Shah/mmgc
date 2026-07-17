@@ -326,6 +326,8 @@ const LabStaffDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans flex">
+      
+                                            <title>Dashboard - MMGC</title>
       <LabStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
@@ -439,7 +441,6 @@ const LabStaffDashboard = () => {
 
                                         return (
                                           <div key={index} className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${visibleRenderCount > 1 ? 'pt-6 border-t border-gray-100' : ''}`}>
-                                            <title>Dashboard - MMGC</title>
                                             <div className="md:col-span-2">
                                               <span className="text-xs font-bold px-2.5 py-1 rounded border uppercase tracking-wide bg-blue-50 text-[#357DF9] border-blue-100">
                                                 Test #{index + 1}: {testItem}
@@ -600,13 +601,6 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
   const pendingTests = allTests.filter(test => !completedTestNames.includes(test.trim()));
   const displayTestName = pendingTests.length > 0 ? pendingTests.join(', ') : order.test;
 
-  // Opens the uploaded document directly in a new tab with a cache-busting timestamp to prevent stale 404 rendering
-  const handleOpenDocument = (e, fileUrl, testName) => {
-    e.preventDefault();
-    const cacheBustedUrl = `${fileUrl}?t=${Date.now()}`;
-    window.open(cacheBustedUrl, '_blank');
-  };
-
   return (
     <tr className={`hover:bg-gray-50 transition-colors ${order.labStatus === "In Progress" && viewMode === 'active' ? 'bg-blue-50/40 font-medium border-l-4 border-l-[#357DF9]' : ''}`}>
       <td className="px-6 py-4 text-gray-900 whitespace-nowrap">
@@ -661,7 +655,8 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
                             <a 
                               key={uIdx}
                               href={url} 
-                              onClick={(e) => handleOpenDocument(e, url, t.testName)}
+                              target="_blank" 
+                              rel="noopener noreferrer"
                               className="text-[10px] text-[#357DF9] hover:underline flex items-center gap-0.5 bg-blue-50 px-1.5 py-0.5 rounded font-semibold"
                             >
                               {isPdf ? 'PDF' : 'Doc'} {uIdx + 1} <ExternalLink size={8} />
@@ -682,7 +677,8 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
               {attachmentUrlsArray.length === 0 && order.labFileUrl && !order.labFileUrl.startsWith('[') && (
                 <a 
                   href={order.labFileUrl} 
-                  onClick={(e) => handleOpenDocument(e, order.labFileUrl, order.test)}
+                  target="_blank" 
+                  rel="noopener noreferrer"
                   className="text-[11px] text-gray-400 hover:text-[#357DF9] flex items-center gap-0.5 underline transition-colors font-medium self-end"
                 >
                   {order.labFileUrl.toLowerCase().endsWith('.pdf') ? 'View PDF' : 'View File'} <ExternalLink size={10} />
