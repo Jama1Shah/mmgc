@@ -122,23 +122,6 @@ const LabStaffDashboard = () => {
     return () => clearInterval(livePollingInterval);
   }, [viewMode]);
 
-  // Hook to fix missing favicon and dynamic tab status title configurations
-  useEffect(() => {
-    document.title = viewMode === 'active' ? 'Lab Staff Dashboard - MMGC' : 'Laboratory Diagnostic History Log Registry - MMGC';
-    
-    const links = document.querySelectorAll("link[rel*='icon']");
-    if (links.length > 0) {
-      links.forEach(link => {
-        link.href = '/favicon.ico';
-      });
-    } else {
-      const link = document.createElement('link');
-      link.rel = 'icon';
-      link.href = '/favicon.ico';
-      document.head.appendChild(link);
-    }
-  }, [viewMode]);
-
   const handleStartProcessing = async (appointmentId) => {
     isSyncingRef.current = true;
     setUpdatingId(appointmentId);
@@ -456,6 +439,7 @@ const LabStaffDashboard = () => {
 
                                         return (
                                           <div key={index} className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${visibleRenderCount > 1 ? 'pt-6 border-t border-gray-100' : ''}`}>
+                                            <title>Dashboard - MMGC</title>
                                             <div className="md:col-span-2">
                                               <span className="text-xs font-bold px-2.5 py-1 rounded border uppercase tracking-wide bg-blue-50 text-[#357DF9] border-blue-100">
                                                 Test #{index + 1}: {testItem}
@@ -669,7 +653,7 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
                           return (
                             <a 
                               key={uIdx}
-                              href={`${url}?t=${Date.now()}`} 
+                              href={`/api/appointments/lab-orders?viewFile=${encodeURIComponent(url)}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="text-[10px] text-[#357DF9] hover:underline flex items-center gap-0.5 bg-blue-50 px-1.5 py-0.5 rounded font-semibold"
@@ -691,7 +675,7 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
               )}
               {attachmentUrlsArray.length === 0 && order.labFileUrl && !order.labFileUrl.startsWith('[') && (
                 <a 
-                  href={`${order.labFileUrl}?t=${Date.now()}`} 
+                  href={`/api/appointments/lab-orders?viewFile=${encodeURIComponent(order.labFileUrl)}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-[11px] text-gray-400 hover:text-[#357DF9] flex items-center gap-0.5 underline transition-colors font-medium self-end"
