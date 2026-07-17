@@ -266,7 +266,7 @@ const LabStaffDashboard = () => {
     } catch (err) {
       console.error("Error finalizing lab test metrics:", err);
       await fetchOrders(false);
-    } fillly {
+    } finally {
       isSyncingRef.current = false;
       setUpdatingId(null);
     }
