@@ -600,6 +600,35 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
   const pendingTests = allTests.filter(test => !completedTestNames.includes(test.trim()));
   const displayTestName = pendingTests.length > 0 ? pendingTests.join(', ') : order.test;
 
+  // Intercepts direct links to build a clean HTML document shell carrying the original site favicon and cache buster
+  const handleOpenDocument = (e, fileUrl, testName) => {
+    e.preventDefault();
+    const cacheBustedUrl = `${fileUrl}?t=${Date.now()}`;
+    const title = testName ? `Report - ${testName} - MMGC` : 'Laboratory Report - MMGC';
+    
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${title}</title>
+            <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F8FAFC; }
+              iframe { width: 100%; height: 100%; border: none; }
+            </style>
+          </head>
+          <body>
+            <iframe src="${cacheBustedUrl}"></iframe>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+    }
+  };
+
   return (
     <tr className={`hover:bg-gray-50 transition-colors ${order.labStatus === "In Progress" && viewMode === 'active' ? 'bg-blue-50/40 font-medium border-l-4 border-l-[#357DF9]' : ''}`}>
       <td className="px-6 py-4 text-gray-900 whitespace-nowrap">
@@ -649,14 +678,12 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
                     {matchingFilesObj && matchingFilesObj.urls && matchingFilesObj.urls.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1.5 border-t border-gray-100 mt-1.5">
                         {matchingFilesObj.urls.map((url, uIdx) => {
-                          {/* ✅ FIX: Support matching PDF data-URIs seamlessly along with regular static files */}
-                          const isPdf = url.toLowerCase().endsWith('.pdf') || url.startsWith('data:application/pdf');
+                          const isPdf = url.toLowerCase().endsWith('.pdf');
                           return (
                             <a 
                               key={uIdx}
                               href={url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
+                              onClick={(e) => handleOpenDocument(e, url, t.testName)}
                               className="text-[10px] text-[#357DF9] hover:underline flex items-center gap-0.5 bg-blue-50 px-1.5 py-0.5 rounded font-semibold"
                             >
                               {isPdf ? 'PDF' : 'Doc'} {uIdx + 1} <ExternalLink size={8} />
@@ -677,12 +704,10 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
               {attachmentUrlsArray.length === 0 && order.labFileUrl && !order.labFileUrl.startsWith('[') && (
                 <a 
                   href={order.labFileUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                  onClick={(e) => handleOpenDocument(e, order.labFileUrl, order.test)}
                   className="text-[11px] text-gray-400 hover:text-[#357DF9] flex items-center gap-0.5 underline transition-colors font-medium self-end"
                 >
-                  {/* ✅ FIX: Support matching PDF data-URIs seamlessly along with regular static files */}
-                  {order.labFileUrl.toLowerCase().endsWith('.pdf') || order.labFileUrl.startsWith('data:application/pdf') ? 'View PDF' : 'View File'} <ExternalLink size={10} />
+                  {order.labFileUrl.toLowerCase().endsWith('.pdf') ? 'View PDF' : 'View File'} <ExternalLink size={10} />
                 </a>
               )}
             </div>

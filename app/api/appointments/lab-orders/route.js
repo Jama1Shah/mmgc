@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import mmgc_db from '@/lib/mmgc_db';
 import Appointment from '@/models/Appointment';
 import mongoose from 'mongoose';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import {
   getLabWorkspaceQuerySchema,
   updateLabStatusSchema,
@@ -205,10 +203,10 @@ export async function PATCH(req) {
               const bytes = await file.arrayBuffer();
               const buffer = Buffer.from(bytes);
 
-              // ✅ FIX: Process as safe Serverless Base64 Data URI to prevent write crashes
-              const base64Data = buffer.toString('base64');
+              // ✅ FIX FOR VERCEL: Convert directly to a Base64 Data URL to bypass read-only disk limitations
               const mimeType = file.type || 'application/octet-stream';
-              savedUrls.push(`data:${mimeType};base64,${base64Data}`);
+              const base64DataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+              savedUrls.push(base64DataUrl);
             }
           }
 
@@ -242,10 +240,9 @@ export async function PATCH(req) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
           
-          // ✅ FIX: Process as safe Serverless Base64 Data URI to prevent write crashes
-          const base64Data = buffer.toString('base64');
+          // ✅ FIX FOR VERCEL: Convert single-file fallbacks to Base64 Data URLs seamlessly
           const mimeType = file.type || 'application/octet-stream';
-          savedFilePath = `data:${mimeType};base64,${base64Data}`;
+          savedFilePath = `data:${mimeType};base64,${buffer.toString('base64')}`;
         }
       }
     }
