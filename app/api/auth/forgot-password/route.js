@@ -47,8 +47,8 @@ export async function POST(req) {
       port: 587,
       secure: false, // false for port 587
       auth: {
-        user: process.env.EMAIL_USER, // wwwjamalshah42@gmail.com
-        pass: process.env.EMAIL_PASS, // hpphkgmlvwtuwvas
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
       tls: {
         rejectUnauthorized: false // Prevents local firewalls from throwing SSL handshake errors
