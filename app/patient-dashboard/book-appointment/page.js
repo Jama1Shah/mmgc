@@ -70,7 +70,7 @@ const BookingForm = () => {
         reason: ''
     });
 
-    const generateTimeSlots = () => {
+    const generateTimeSlots = (targetDate = bookingDetails.date) => {
         const slots = [];
         let current = new Date();
         current.setHours(9, 0, 0);
@@ -82,7 +82,7 @@ const BookingForm = () => {
         while (current <= end) {
             const slotTimeStr = current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            if (bookingDetails.date === today) {
+            if (targetDate === today) {
                 const currentHours = current.getHours();
                 const currentMinutes = current.getMinutes();
                 const nowHours = now.getHours();
@@ -182,7 +182,28 @@ const BookingForm = () => {
 
     const applyRecommendation = () => {
         if (recommendation) {
-            const updated = { ...bookingDetails, date: recommendation.date, time: recommendation.time };
+            // Pre-generate slots for the recommended date to look up formatting matching rules
+            const slots = generateTimeSlots(recommendation.date);
+            
+            // Helper function to turn strings like "09:05 AM", "9:05 am", or "14:30" into absolute numeric minutes
+            const getMinutes = (str) => {
+                const match = str.match(/(\d+):(\d+)/);
+                if (!match) return null;
+                let h = parseInt(match[1], 10);
+                const m = parseInt(match[2], 10);
+                const isPM = /pm/i.test(str);
+                const isAM = /am/i.test(str);
+                if (isPM && h < 12) h += 12;
+                if (isAM && h === 12) h = 0;
+                return h * 60 + m;
+            };
+
+            const recMinutes = getMinutes(recommendation.time);
+            
+            // Re-map recommended string directly to browser generated format counterparts
+            const matchingSlot = slots.find(slot => getMinutes(slot) === recMinutes) || recommendation.time;
+
+            const updated = { ...bookingDetails, date: recommendation.date, time: matchingSlot };
             setBookingDetails(updated);
             verifySlot(updated);
         }
