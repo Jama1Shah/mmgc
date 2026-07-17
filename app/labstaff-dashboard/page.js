@@ -88,6 +88,7 @@ const LabStaffDashboard = () => {
         
         // If a newer fetch request has already started, discard this older response entirely
         if (currentFetchTime < latestFetchTimeRef.current) return;
+        if (isSyncingRef.current) return;
         
         setOrders(prevOrders => {
           return serverData.map(serverOrder => {
@@ -325,6 +326,8 @@ const LabStaffDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans flex">
+      
+                                            <title>Dashboard - MMGC</title>
       <LabStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
@@ -438,7 +441,6 @@ const LabStaffDashboard = () => {
 
                                         return (
                                           <div key={index} className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${visibleRenderCount > 1 ? 'pt-6 border-t border-gray-100' : ''}`}>
-                                            <title>Dashboard - MMGC</title>
                                             <div className="md:col-span-2">
                                               <span className="text-xs font-bold px-2.5 py-1 rounded border uppercase tracking-wide bg-blue-50 text-[#357DF9] border-blue-100">
                                                 Test #{index + 1}: {testItem}
