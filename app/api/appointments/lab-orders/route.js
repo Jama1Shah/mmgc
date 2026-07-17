@@ -4,7 +4,6 @@ import Appointment from '@/models/Appointment';
 import mongoose from 'mongoose';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { revalidatePath } from 'next/cache';
 import {
   getLabWorkspaceQuerySchema,
   updateLabStatusSchema,
@@ -39,7 +38,14 @@ export async function GET(req) {
       if (!app) {
         return NextResponse.json({ error: "Appointment trace index context not found" }, { status: 404 });
       }
-      return NextResponse.json(app, { status: 200 });
+      return NextResponse.json(app, { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
     }
 
     // Base query targeting laboratory workflows
@@ -106,8 +112,7 @@ export async function GET(req) {
 
       if (!extractedNotes || extractedNotes === '') {
         if (rxDoc && rxDoc.labNotes) {
-          // ✅ FIX: Corrected typo access path from rxDoc.rxDoc.labNotes to rxDoc.labNotes
-          extractedNotes = rxDoc.labNotes;
+          extractedNotes = rxDoc.rxDoc.labNotes;
           if (rxDoc.labFileUrl) {
             extractedFileUrl = rxDoc.labFileUrl;
           }
@@ -350,9 +355,6 @@ export async function PATCH(req) {
       );
     }
 
-    // ✅ FIX: Purge Next.js server cache to make documents and findings show up instantly across components
-    revalidatePath('/api/appointments/lab-orders');
-
     return NextResponse.json({ success: true, data: updatedRecord }, { status: 200 });
   } catch (error) {
     console.error("Failed to commit operational status mutation:", error);
@@ -386,14 +388,12 @@ export async function DELETE(req) {
     // Matches 'clearHistory' action dispatched from dashboard component handler
     if (action === 'clearHistory' || action === 'wipeHistory') {
       await Appointment.findByIdAndUpdate(id, { $set: { clearedFromHistory: true } });
-      revalidatePath('/api/appointments/lab-orders');
       return NextResponse.json({ success: true, message: "Record permanently wiped from laboratory history log registry." }, { status: 200 });
     }
 
     // Matches 'deleteActive' action dispatched from dashboard component handler
     else {
       await Appointment.findByIdAndUpdate(id, { $set: { deletedByLab: true } });
-      revalidatePath('/api/appointments/lab-orders');
       return NextResponse.json({ success: true, message: "Record dismissed safely from active workspace pipeline view." }, { status: 200 });
     }
   } catch (error) {
