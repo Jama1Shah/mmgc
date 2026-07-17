@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import mmgc_db from '@/lib/mmgc_db';
 import Appointment from '@/models/Appointment';
 import mongoose from 'mongoose';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import {
   getLabWorkspaceQuerySchema,
   updateLabStatusSchema,
@@ -38,14 +36,7 @@ export async function GET(req) {
       if (!app) {
         return NextResponse.json({ error: "Appointment trace index context not found" }, { status: 404 });
       }
-      return NextResponse.json(app, { 
-        status: 200,
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
+      return NextResponse.json(app, { status: 200 });
     }
 
     // Base query targeting laboratory workflows
@@ -168,10 +159,21 @@ export async function PATCH(req) {
 
       const structuredTestsStr = formData.get('structuredTests');
 
+      // Zod Validation execution on parsed Form-Data payload mapping
+      const payloadToValidate = {
+        id: formData.get('id') || undefined,
+        _id: formData.get('_id') || undefined,
+        labStatus: formData.get('labStatus') || undefined,
+        labNotes: formData.get('labNotes') || undefined,
+        structuredTests: structuredTestsStr || undefined,
+      };
+      const validation = updateLabStatusSchema.safeParse(payloadToValidate);
+      if (!validation.success) {
+        return NextResponse.json({ error: "Validation failed", details: validation.error.format() }, { status: 400 });
+      }
+
       if (structuredTestsStr) {
         const structuredTests = JSON.parse(structuredTestsStr);
-        const uploadDir = join(process.cwd(), 'public', 'uploads');
-        await mkdir(uploadDir, { recursive: true });
 
         // Retrieve the current data to avoid redoing or overwriting previous metrics
         const existingApp = await Appointment.findById(id);
@@ -201,12 +203,10 @@ export async function PATCH(req) {
               const bytes = await file.arrayBuffer();
               const buffer = Buffer.from(bytes);
 
-              // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
-              const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-
-              const uploadPath = join(uploadDir, filename);
-              await writeFile(uploadPath, buffer);
-              savedUrls.push(`/uploads/${filename}`);
+              // ✅ FIX FOR VERCEL: Convert directly to a Base64 Data URL to bypass read-only disk limitations
+              const mimeType = file.type || 'application/octet-stream';
+              const base64DataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+              savedUrls.push(base64DataUrl);
             }
           }
 
@@ -239,27 +239,11 @@ export async function PATCH(req) {
         if (file && typeof file !== 'string' && file.name) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
-          // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
-          const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const uploadDir = join(process.cwd(), 'public', 'uploads');
-          await mkdir(uploadDir, { recursive: true });
-          const uploadPath = join(uploadDir, filename);
-          await writeFile(uploadPath, buffer);
-          savedFilePath = `/uploads/${filename}`;
+          
+          // ✅ FIX FOR VERCEL: Convert single-file fallbacks to Base64 Data URLs seamlessly
+          const mimeType = file.type || 'application/octet-stream';
+          savedFilePath = `data:${mimeType};base64,${buffer.toString('base64')}`;
         }
-      }
-
-      // ✅ FIX: Zod Validation must run AFTER compiling `labNotes` and `structuredTests` so stringified versions pass schemas clean.
-      const payloadToValidate = {
-        id: id || undefined,
-        _id: id || undefined,
-        labStatus: labStatus || undefined,
-        labNotes: labNotes || undefined,
-        structuredTests: structuredTestsStr || undefined,
-      };
-      const validation = updateLabStatusSchema.safeParse(payloadToValidate);
-      if (!validation.success) {
-        return NextResponse.json({ error: "Validation failed", details: validation.error.format() }, { status: 400 });
       }
     }
     // --- MODE B: RAW JSON PROCESSING (SAMPLE ACQUISITION STATUS SHIFTS / NEW TESTS ISSUED) ---
