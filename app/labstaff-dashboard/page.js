@@ -266,7 +266,7 @@ const LabStaffDashboard = () => {
     } catch (err) {
       console.error("Error finalizing lab test metrics:", err);
       await fetchOrders(false);
-    } finally {
+    } fillly {
       isSyncingRef.current = false;
       setUpdatingId(null);
     }
@@ -603,7 +603,13 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
   // Intercepts direct links to build a clean HTML document shell carrying the original site favicon and cache buster
   const handleOpenDocument = (e, fileUrl, testName) => {
     e.preventDefault();
-    const cacheBustedUrl = `${fileUrl}?t=${Date.now()}`;
+    if (!fileUrl) return;
+
+    // Safely parse or configure the fully qualified domain root origin
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const absoluteUrl = fileUrl.startsWith('http') ? fileUrl : `${origin}${fileUrl}`;
+    const cacheBustedUrl = `${absoluteUrl}?t=${Date.now()}`;
+    const faviconUrl = `${origin}/favicon.ico`;
     const title = testName ? `Report - ${testName} - MMGC` : 'Laboratory Report - MMGC';
     
     const newWindow = window.open('', '_blank');
@@ -613,7 +619,8 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
         <html>
           <head>
             <title>${title}</title>
-            <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+            <base href="${origin}">
+            <link rel="icon" href="${faviconUrl}" type="image/x-icon" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
               body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #F8FAFC; }
