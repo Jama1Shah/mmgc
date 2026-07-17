@@ -236,7 +236,7 @@ const DailySchedule = () => {
       time: app.time || ''
     });
 
-    router.push(`/assign-lab-test?${queryParams.toString()}`);
+    router.push(`/doctor-dashboard/assign-lab-test?${queryParams.toString()}`);
   };
 
   // 🏥 Navigate to Specialized Admitted Management System Workspace View
