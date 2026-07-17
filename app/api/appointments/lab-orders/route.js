@@ -168,19 +168,6 @@ export async function PATCH(req) {
 
       const structuredTestsStr = formData.get('structuredTests');
 
-      // Zod Validation execution on parsed Form-Data payload mapping
-      const payloadToValidate = {
-        id: formData.get('id') || undefined,
-        _id: formData.get('_id') || undefined,
-        labStatus: formData.get('labStatus') || undefined,
-        labNotes: formData.get('labNotes') || undefined,
-        structuredTests: structuredTestsStr || undefined,
-      };
-      const validation = updateLabStatusSchema.safeParse(payloadToValidate);
-      if (!validation.success) {
-        return NextResponse.json({ error: "Validation failed", details: validation.error.format() }, { status: 400 });
-      }
-
       if (structuredTestsStr) {
         const structuredTests = JSON.parse(structuredTestsStr);
         const uploadDir = join(process.cwd(), 'public', 'uploads');
@@ -260,6 +247,19 @@ export async function PATCH(req) {
           await writeFile(uploadPath, buffer);
           savedFilePath = `/uploads/${filename}`;
         }
+      }
+
+      // ✅ FIX: Zod Validation must run AFTER compiling `labNotes` and `structuredTests` so stringified versions pass schemas clean.
+      const payloadToValidate = {
+        id: id || undefined,
+        _id: id || undefined,
+        labStatus: labStatus || undefined,
+        labNotes: labNotes || undefined,
+        structuredTests: structuredTestsStr || undefined,
+      };
+      const validation = updateLabStatusSchema.safeParse(payloadToValidate);
+      if (!validation.success) {
+        return NextResponse.json({ error: "Validation failed", details: validation.error.format() }, { status: 400 });
       }
     }
     // --- MODE B: RAW JSON PROCESSING (SAMPLE ACQUISITION STATUS SHIFTS / NEW TESTS ISSUED) ---
