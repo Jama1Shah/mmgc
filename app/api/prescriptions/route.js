@@ -113,6 +113,59 @@ if (mongoose.models.Prescription) {
 }
 const Prescription = mongoose.model('Prescription', PrescriptionSchema);
 
+// ==========================================
+// HELPER: Convert a raw stored data: URI (or the structured
+// [{testName, urls}] array of them) into the same short,
+// browser-safe proxy link the lab-orders route already knows
+// how to resolve and stream back with proper headers. This is
+// what fixes files not opening correctly on the doctor / nurse /
+// patient pages — they were previously receiving the raw
+// multi-MB data: URI directly from the database.
+// ==========================================
+function buildFileProxyUrl(appointmentId, testName, idx) {
+  if (testName !== undefined && idx !== undefined) {
+    return `/api/appointments/lab-orders?fileId=${appointmentId}&test=${encodeURIComponent(testName || '')}&idx=${idx}`;
+  }
+  return `/api/appointments/lab-orders?fileId=${appointmentId}`;
+}
+
+function transformFileUrlsForResponse(labFileUrlRaw, appointmentId) {
+  if (!labFileUrlRaw || !appointmentId) return labFileUrlRaw;
+
+  // Structured multi-test file array: [{ testName, urls: [...] }]
+  if (labFileUrlRaw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(labFileUrlRaw);
+      if (Array.isArray(parsed)) {
+        const transformed = parsed.map(entry => {
+          if (!entry || !Array.isArray(entry.urls)) return entry;
+          const urls = entry.urls.map((u, idx) => {
+            // Only proxy genuine embedded data URIs; leave any legacy
+            // '/uploads/...' paths or already-proxied links untouched.
+            if (typeof u === 'string' && u.startsWith('data:')) {
+              return buildFileProxyUrl(appointmentId, entry.testName, idx);
+            }
+            return u;
+          });
+          return { ...entry, urls };
+        });
+        return JSON.stringify(transformed);
+      }
+    } catch (e) {
+      return labFileUrlRaw;
+    }
+    return labFileUrlRaw;
+  }
+
+  // Single embedded data URI
+  if (labFileUrlRaw.startsWith('data:')) {
+    return buildFileProxyUrl(appointmentId);
+  }
+
+  // Legacy plain path (pre-existing records) — leave untouched
+  return labFileUrlRaw;
+}
+
 // FETCH PRESCRIPTIONS
 export async function GET(req) {
   try {
@@ -228,6 +281,15 @@ export async function GET(req) {
           if (doc.appointmentId.labFileUrl) {
             doc.labFileUrl = doc.appointmentId.labFileUrl;
           }
+        }
+
+        // ✅ FIX: Convert any raw embedded data: URI into a short, browser-safe
+        // proxy link before it ever reaches the doctor/nurse/patient dashboards.
+        if (doc.labFileUrl) {
+          const apptIdForFile = doc.appointmentId?._id
+            ? doc.appointmentId._id.toString()
+            : (doc.appointmentId ? doc.appointmentId.toString() : null);
+          doc.labFileUrl = transformFileUrlsForResponse(doc.labFileUrl, apptIdForFile);
         }
 
         // 4. Sync workspace workflow operation status tracking
@@ -415,6 +477,14 @@ export async function PUT(req) {
       return NextResponse.json({ error: "Prescription record not found." }, { status: 404 });
     }
 
+    const updatedPrescriptionObj = updatedPrescription.toObject();
+    if (updatedPrescriptionObj.labFileUrl) {
+      const apptIdForFile = updatedPrescriptionObj.appointmentId
+        ? updatedPrescriptionObj.appointmentId.toString()
+        : null;
+      updatedPrescriptionObj.labFileUrl = transformFileUrlsForResponse(updatedPrescriptionObj.labFileUrl, apptIdForFile);
+    }
+
     // Keep appointment database parameters synchronized if modifying labs context metrics references inline
     if (updatedPrescription.appointmentId && (data.labPrescription !== undefined || data.labStatus !== undefined)) {
       let appointmentUpdates = {};
@@ -427,7 +497,7 @@ export async function PUT(req) {
     return NextResponse.json({ 
       success: true, 
       message: "Prescription parameters synchronized successfully.", 
-      data: updatedPrescription 
+      data: updatedPrescriptionObj 
     });
 
   } catch (error) {

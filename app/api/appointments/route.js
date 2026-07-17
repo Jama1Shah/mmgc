@@ -13,6 +13,59 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// ==========================================
+// HELPER: Convert a raw stored data: URI (or the structured
+// [{testName, urls}] array of them) into the same short,
+// browser-safe proxy link the lab-orders route resolves and
+// streams back with proper headers. Applied everywhere this
+// route hands labFileUrl to the frontend — this route feeds
+// the patient panel, doctor panel, and (per the comment below)
+// lab analytics / prescription / patient summary pages.
+// ==========================================
+function buildFileProxyUrl(appointmentId, testName, idx) {
+  if (testName !== undefined && idx !== undefined) {
+    return `/api/appointments/lab-orders?fileId=${appointmentId}&test=${encodeURIComponent(testName || '')}&idx=${idx}`;
+  }
+  return `/api/appointments/lab-orders?fileId=${appointmentId}`;
+}
+
+function transformFileUrlsForResponse(labFileUrlRaw, appointmentId) {
+  if (!labFileUrlRaw || !appointmentId) return labFileUrlRaw;
+
+  // Structured multi-test file array: [{ testName, urls: [...] }]
+  if (labFileUrlRaw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(labFileUrlRaw);
+      if (Array.isArray(parsed)) {
+        const transformed = parsed.map(entry => {
+          if (!entry || !Array.isArray(entry.urls)) return entry;
+          const urls = entry.urls.map((u, idx) => {
+            // Only proxy genuine embedded data URIs; leave any legacy
+            // '/uploads/...' paths or already-proxied links untouched.
+            if (typeof u === 'string' && u.startsWith('data:')) {
+              return buildFileProxyUrl(appointmentId, entry.testName, idx);
+            }
+            return u;
+          });
+          return { ...entry, urls };
+        });
+        return JSON.stringify(transformed);
+      }
+    } catch (e) {
+      return labFileUrlRaw;
+    }
+    return labFileUrlRaw;
+  }
+
+  // Single embedded data URI
+  if (labFileUrlRaw.startsWith('data:')) {
+    return buildFileProxyUrl(appointmentId);
+  }
+
+  // Legacy plain path (pre-existing records) — leave untouched
+  return labFileUrlRaw;
+}
+
 // Inline initialization of the Prescription model to check relationship fields across collections safely
 const Prescription = mongoose.models.Prescription || mongoose.model('Prescription', new mongoose.Schema({
   appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' },
@@ -54,7 +107,14 @@ export async function GET(req) {
           await Appointment.findByIdAndUpdate(apptObj._id, { $set: { status: 'Rescheduled' } });
         }
       }
-      
+
+      // ✅ FIX: Convert any raw embedded data: URI into a short, browser-safe
+      // proxy link — this branch feeds lab analytics, prescription, and
+      // patient summary pages directly.
+      if (apptObj.labFileUrl) {
+        apptObj.labFileUrl = transformFileUrlsForResponse(apptObj.labFileUrl, apptObj._id.toString());
+      }
+
       return NextResponse.json(apptObj, { status: 200 });
     }
 
@@ -85,6 +145,11 @@ export async function GET(req) {
         apptObj.labReason = apptObj.labReason || "";
         apptObj.labNotes = apptObj.labNotes || "";
         apptObj.labFileUrl = apptObj.labFileUrl || null;
+
+        // ✅ FIX: Convert any raw embedded data: URI into a short, browser-safe proxy link
+        if (apptObj.labFileUrl) {
+          apptObj.labFileUrl = transformFileUrlsForResponse(apptObj.labFileUrl, apptObj._id.toString());
+        }
 
         if (apptObj.status === 'Lab Completed') {
           apptObj.analyticsLink = `/lab-analytics?id=${apptObj._id.toString()}`;
@@ -198,6 +263,11 @@ export async function GET(req) {
       // Inject navigation tracking fields explicitly
       apptObj.analyticsLink = null;
       apptObj.prescriptionLink = null;
+
+      // ✅ FIX: Convert any raw embedded data: URI into a short, browser-safe proxy link
+      if (apptObj.labFileUrl) {
+        apptObj.labFileUrl = transformFileUrlsForResponse(apptObj.labFileUrl, apptObj._id.toString());
+      }
 
       if (apptObj.status === 'Lab Completed') {
         apptObj.analyticsLink = `/lab-analytics?id=${apptObj._id.toString()}`;
@@ -355,7 +425,12 @@ export async function PUT(req) {
       { new: true, runValidators: true }
     );
 
-    return NextResponse.json({ success: true, data: updatedAppointment });
+    const updatedAppointmentObj = updatedAppointment.toObject();
+    if (updatedAppointmentObj.labFileUrl) {
+      updatedAppointmentObj.labFileUrl = transformFileUrlsForResponse(updatedAppointmentObj.labFileUrl, updatedAppointmentObj._id.toString());
+    }
+
+    return NextResponse.json({ success: true, data: updatedAppointmentObj });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -407,7 +482,12 @@ export async function PATCH(req) {
       { new: true, runValidators: true }
     );
 
-    return NextResponse.json({ success: true, data: updatedAppointment });
+    const updatedAppointmentObj = updatedAppointment.toObject();
+    if (updatedAppointmentObj.labFileUrl) {
+      updatedAppointmentObj.labFileUrl = transformFileUrlsForResponse(updatedAppointmentObj.labFileUrl, updatedAppointmentObj._id.toString());
+    }
+
+    return NextResponse.json({ success: true, data: updatedAppointmentObj });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -457,10 +537,14 @@ export async function DELETE(req) {
         { $set: { deletedByDoctor: true } },
         { new: true }
       );
+      const softDeletedApptObj = softDeletedAppt.toObject();
+      if (softDeletedApptObj.labFileUrl) {
+        softDeletedApptObj.labFileUrl = transformFileUrlsForResponse(softDeletedApptObj.labFileUrl, softDeletedApptObj._id.toString());
+      }
       return NextResponse.json({ 
         success: true, 
         message: "Record removed from doctor view; retained for systems/patient trace.", 
-        data: softDeletedAppt 
+        data: softDeletedApptObj 
       }, { status: 200 });
     }
 
