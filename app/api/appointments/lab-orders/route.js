@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import mmgc_db from '@/lib/mmgc_db';
 import Appointment from '@/models/Appointment';
 import mongoose from 'mongoose';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { revalidatePath } from 'next/cache';
 import {
   getLabWorkspaceQuerySchema,
   updateLabStatusSchema,
@@ -103,7 +106,8 @@ export async function GET(req) {
 
       if (!extractedNotes || extractedNotes === '') {
         if (rxDoc && rxDoc.labNotes) {
-          extractedNotes = rxDoc.rxDoc.labNotes;
+          // ✅ FIX: Corrected typo access path from rxDoc.rxDoc.labNotes to rxDoc.labNotes
+          extractedNotes = rxDoc.labNotes;
           if (rxDoc.labFileUrl) {
             extractedFileUrl = rxDoc.labFileUrl;
           }
@@ -174,6 +178,8 @@ export async function PATCH(req) {
 
       if (structuredTestsStr) {
         const structuredTests = JSON.parse(structuredTestsStr);
+        const uploadDir = join(process.cwd(), 'public', 'uploads');
+        await mkdir(uploadDir, { recursive: true });
 
         // Retrieve the current data to avoid redoing or overwriting previous metrics
         const existingApp = await Appointment.findById(id);
@@ -203,10 +209,12 @@ export async function PATCH(req) {
               const bytes = await file.arrayBuffer();
               const buffer = Buffer.from(bytes);
 
-              // ✅ FIX FOR VERCEL: Convert directly to a Base64 Data URL to bypass read-only disk limitations
-              const mimeType = file.type || 'application/octet-stream';
-              const base64DataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
-              savedUrls.push(base64DataUrl);
+              // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
+              const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+              const uploadPath = join(uploadDir, filename);
+              await writeFile(uploadPath, buffer);
+              savedUrls.push(`/uploads/${filename}`);
             }
           }
 
@@ -239,10 +247,13 @@ export async function PATCH(req) {
         if (file && typeof file !== 'string' && file.name) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
-          
-          // ✅ FIX FOR VERCEL: Convert single-file fallbacks to Base64 Data URLs seamlessly
-          const mimeType = file.type || 'application/octet-stream';
-          savedFilePath = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          // ✅ FIX: Cleanse all unsafe URL characters to allow opening PDFs seamlessly later
+          const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const uploadDir = join(process.cwd(), 'public', 'uploads');
+          await mkdir(uploadDir, { recursive: true });
+          const uploadPath = join(uploadDir, filename);
+          await writeFile(uploadPath, buffer);
+          savedFilePath = `/uploads/${filename}`;
         }
       }
     }
@@ -339,6 +350,9 @@ export async function PATCH(req) {
       );
     }
 
+    // ✅ FIX: Purge Next.js server cache to make documents and findings show up instantly across components
+    revalidatePath('/api/appointments/lab-orders');
+
     return NextResponse.json({ success: true, data: updatedRecord }, { status: 200 });
   } catch (error) {
     console.error("Failed to commit operational status mutation:", error);
@@ -372,12 +386,14 @@ export async function DELETE(req) {
     // Matches 'clearHistory' action dispatched from dashboard component handler
     if (action === 'clearHistory' || action === 'wipeHistory') {
       await Appointment.findByIdAndUpdate(id, { $set: { clearedFromHistory: true } });
+      revalidatePath('/api/appointments/lab-orders');
       return NextResponse.json({ success: true, message: "Record permanently wiped from laboratory history log registry." }, { status: 200 });
     }
 
     // Matches 'deleteActive' action dispatched from dashboard component handler
     else {
       await Appointment.findByIdAndUpdate(id, { $set: { deletedByLab: true } });
+      revalidatePath('/api/appointments/lab-orders');
       return NextResponse.json({ success: true, message: "Record dismissed safely from active workspace pipeline view." }, { status: 200 });
     }
   } catch (error) {
