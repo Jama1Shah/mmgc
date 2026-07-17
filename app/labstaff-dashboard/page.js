@@ -650,12 +650,10 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
                       <div className="flex flex-wrap gap-1 pt-1.5 border-t border-gray-100 mt-1.5">
                         {matchingFilesObj.urls.map((url, uIdx) => {
                           const isPdf = url.toLowerCase().endsWith('.pdf');
-                          // Append timestamp cache-buster parameter to force fresh asset download bypasses
-                          const cacheBustedUrl = url ? (url.includes('?') ? `${url}&refresh=${Date.now()}` : `${url}?refresh=${Date.now()}`) : '#';
                           return (
                             <a 
                               key={uIdx}
-                              href={cacheBustedUrl} 
+                              href={url} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="text-[10px] text-[#357DF9] hover:underline flex items-center gap-0.5 bg-blue-50 px-1.5 py-0.5 rounded font-semibold"
@@ -677,7 +675,7 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
               )}
               {attachmentUrlsArray.length === 0 && order.labFileUrl && !order.labFileUrl.startsWith('[') && (
                 <a 
-                  href={order.labFileUrl ? (order.labFileUrl.includes('?') ? `${order.labFileUrl}&refresh=${Date.now()}` : `${order.labFileUrl}?refresh=${Date.now()}`) : '#'} 
+                  href={order.labFileUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-[11px] text-gray-400 hover:text-[#357DF9] flex items-center gap-0.5 underline transition-colors font-medium self-end"
