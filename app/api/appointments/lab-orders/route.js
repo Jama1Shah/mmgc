@@ -12,6 +12,28 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 // ========================================================
+// HELPER: Convert an uploaded File object into a persisted,
+// self-contained base64 data URI (no filesystem writes).
+// This works identically on local dev AND on Vercel, since
+// Vercel's serverless functions have a read-only/ephemeral
+// filesystem and cannot reliably serve files written to disk
+// at request-time (root cause of the "needs a refresh" bug).
+// ========================================================
+async function fileToStoredUrl(file, id) {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const mimeType = file.type || 'application/octet-stream';
+
+  // ✅ Keep original filename cleansing so a valid file extension is preserved
+  const filename = `${id}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+  // Data URI holds the actual file bytes so nothing needs to live on disk.
+  // The '#filename.ext' suffix is inert for data: URLs (ignored as a fragment)
+  // but keeps `url.endsWith('.pdf')` checks in the frontend working unchanged.
+  return `data:${mimeType};base64,${buffer.toString('base64')}#${filename}`;
+}
+
+// ========================================================
 // 1. GET: FETCH ACTIVE LAB WORKSPACE OR ARCHIVED RECORDS
 // ========================================================
 export async function GET(req) {
@@ -200,13 +222,13 @@ export async function PATCH(req) {
 
           for (const file of attachedFiles) {
             if (file && typeof file !== 'string' && file.name) {
-              const bytes = await file.arrayBuffer();
-              const buffer = Buffer.from(bytes);
-
-              // ✅ FIX FOR VERCEL: Convert directly to a Base64 Data URL to bypass read-only disk limitations
-              const mimeType = file.type || 'application/octet-stream';
-              const base64DataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
-              savedUrls.push(base64DataUrl);
+              // ✅ FIX: Persist file bytes directly into MongoDB as a base64 data URI
+              // instead of writing to the local filesystem. Vercel's serverless
+              // functions have a read-only/ephemeral disk, so files written via
+              // fs.writeFile never actually persist in production — this is why
+              // the uploaded file wouldn't reliably open until (sometimes) a refresh.
+              const storedUrl = await fileToStoredUrl(file, id);
+              savedUrls.push(storedUrl);
             }
           }
 
@@ -237,12 +259,8 @@ export async function PATCH(req) {
         labNotes = formData.get('labNotes') || "";
         const file = formData.get('labFile');
         if (file && typeof file !== 'string' && file.name) {
-          const bytes = await file.arrayBuffer();
-          const buffer = Buffer.from(bytes);
-          
-          // ✅ FIX FOR VERCEL: Convert single-file fallbacks to Base64 Data URLs seamlessly
-          const mimeType = file.type || 'application/octet-stream';
-          savedFilePath = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          // ✅ FIX: Same disk-free persistence as above for the single-file path.
+          savedFilePath = await fileToStoredUrl(file, id);
         }
       }
     }
