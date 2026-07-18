@@ -104,7 +104,7 @@ export default function AdminBillingPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          // ✅ FIX: Changed index deduplication matching criterion from internal DB _id to structural appointmentId
+          // Deduplication matching criterion from internal DB _id to structural appointmentId
           const uniqueInvoices = data.filter((inv, index, self) => 
             self.findIndex(i => i.appointmentId === inv.appointmentId) === index
           );
@@ -169,7 +169,8 @@ export default function AdminBillingPage() {
     }
 
     syncAndValidateInvoices();
-  }, [appointments.length, invoices.length, labTests, wards]);
+    // 🛡️ REFIXTURE: Track the complete object arrays directly to prevent stale closure cycles during runtime mutations
+  }, [appointments, invoices, labTests, wards]);
 
   // Handle Status Update (PUT)
   const handleUpdateStatus = async (invoiceId, newStatus) => {

@@ -354,6 +354,7 @@ export default function BillingOverviewPage() {
 
         return (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <title>Dashboard - MMGC</title>
             <div className="bg-white rounded-2xl max-w-md w-full shadow-xl border border-slate-100 overflow-hidden">
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <div>
@@ -412,7 +413,6 @@ export default function BillingOverviewPage() {
                     const wOvernightFee = matchedWard ? (matchedWard.overnightFee || 0) : 2500;
                     return (
                       <>
-<title>Dashboard - MMGC</title>
                         <div className="flex justify-between text-xs text-slate-600 border-t border-slate-100 pt-1 mt-1">
                           <span>Total Admission Days</span>
                           <span className="font-bold text-slate-700">

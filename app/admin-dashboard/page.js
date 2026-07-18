@@ -17,7 +17,7 @@ export default function UserManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
-  const [isVerified, setIsVerified] = useState(true); // Added state for toggle
+  const [isVerified, setIsVerified] = useState(true);
 
   // Custom Modal States
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: null });
@@ -70,13 +70,19 @@ export default function UserManagement() {
     };
   }, [confirmModal, alertModal]);
 
-  // Helper to trigger custom alerts
   const showAlert = (message, title = "Notification") => {
     setAlertModal({ isOpen: true, message, title });
   };
 
+  // Safe centralized modal closure routine
+  const closeUserModal = () => {
+    setIsModalOpen(false);
+    setEditingUser(null);
+    setShowPassword(false);
+    setIsVerified(true);
+  };
+
   // --- DYNAMIC DEPARTMENT LOGIC ---
-  // This extracts every unique department currently in your database
   const dynamicDepartments = Array.from(
     new Set(users.map((u) => u.dept).filter(Boolean))
   ).sort();
@@ -92,7 +98,7 @@ export default function UserManagement() {
   const openEditModal = (user) => {
     setEditingUser(user);
     setShowPassword(false);
-    setIsVerified(user.isVerified ?? false); // Set toggle value from existing state
+    setIsVerified(user.isVerified ?? false);
     setIsModalOpen(true);
   };
 
@@ -104,15 +110,21 @@ export default function UserManagement() {
     const userData = Object.fromEntries(formData);
     
     const method = editingUser ? 'PUT' : 'POST';
-    const body = editingUser 
-      ? { ...userData, id: editingUser._id, isVerified } 
-      : { ...userData, isVerified };
+    let bodyData = { ...userData, isVerified };
+
+    if (editingUser) {
+      bodyData.id = editingUser._id;
+      // 🛡️ CRITICAL SECURITY FIX: Prevent sending blank passwords on updates
+      if (!bodyData.password || bodyData.password.trim() === "") {
+        delete bodyData.password;
+      }
+    }
 
     try {
       const response = await fetch('/api/users', {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(bodyData),
       });
 
       if (response.ok) {
@@ -124,10 +136,7 @@ export default function UserManagement() {
           setUsers((prev) => [savedUser, ...prev]);
         }
 
-        setIsModalOpen(false);
-        setEditingUser(null);
-        setShowPassword(false);
-        setIsVerified(true);
+        closeUserModal();
         e.target.reset();
       } else {
         const err = await response.json();
@@ -168,8 +177,8 @@ export default function UserManagement() {
 
   const filteredUsers = users.filter(user => {
     const matchesTab = activeTab === 'All' || user.role === activeTab;
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          user.email?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -299,7 +308,7 @@ export default function UserManagement() {
                   <h3 className="text-xl font-bold">{editingUser ? 'Edit Account' : 'Register New Account'}</h3>
                   <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">MMGC Credential System</p>
                 </div>
-                <button type="button" onClick={() => { setIsModalOpen(false); setEditingUser(null); setShowPassword(false); setIsVerified(true); }} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24}/></button>
+                <button type="button" onClick={closeUserModal} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24}/></button>
               </div>
               
               <div className="p-6 md:p-8 space-y-4 md:space-y-6">
@@ -316,7 +325,6 @@ export default function UserManagement() {
                   </div>
                 </div>
 
-                {/* DYNAMIC DEPARTMENT INPUT */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</label>
                   <input 
@@ -339,7 +347,6 @@ export default function UserManagement() {
                   <input name="email" required defaultValue={editingUser?.email || ""} type="email" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm" placeholder="example@mmgc.com" />
                 </div>
 
-                {/* IS VERIFIED TOGGLE */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
                   <div>
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">Account Verified</label>
@@ -357,7 +364,7 @@ export default function UserManagement() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingUser ? "New Password" : "Enter Password"}</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingUser ? "New Password (Leave blank to keep current)" : "Enter Password"}</label>
                   <div className="relative">
                     <input 
                       name="password" 
@@ -387,7 +394,7 @@ export default function UserManagement() {
               </div>
 
               <div className="p-6 md:p-8 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-end gap-3">
-                <button type="button" onClick={() => { setIsModalOpen(false); setEditingUser(null); setShowPassword(false); setIsVerified(true); }} className="px-5 py-2.5 text-sm font-bold text-slate-400 hover:text-slate-600 transition-all order-2 md:order-1">Cancel</button>
+                <button type="button" onClick={closeUserModal} className="px-5 py-2.5 text-sm font-bold text-slate-400 hover:text-slate-600 transition-all order-2 md:order-1">Cancel</button>
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
