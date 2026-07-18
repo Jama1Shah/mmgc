@@ -1,11 +1,12 @@
 'use client';
 import React from 'react'
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, BanknoteCheck, Coins, LogOut, Activity, Settings, X } from 'lucide-react';
 
 const AdminSidebar = ({ isOpen, setIsOpen }) => {
     const pathname = usePathname();
+    const router = useRouter();
 
     const navLinks = [
         { name: 'Dashboard', href: '/admin-dashboard', icon: <LayoutDashboard size={20} /> },
@@ -13,6 +14,27 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
         { name: 'Manage Fees', href: '/admin-dashboard/admin-manage-fee', icon: <Coins size={20} /> },
         { name: 'Settings', href: '/admin-dashboard/settings', icon: <Settings size={20} /> },
     ];
+
+    const handleLogout = (e) => {
+        e.preventDefault();
+        setIsOpen(false);
+
+        // 1. Clear active operational session storage
+        sessionStorage.clear();
+
+        // 2. Clear persistent history backups completely
+        localStorage.removeItem('user');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+
+        // 3. Clear client-side auth cookies explicitly
+        document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+        // 4. Redirect cleanly back to the login/landing gateway
+        router.push('/');
+    };
 
     return (
         <>
@@ -72,7 +94,11 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
                 </nav>
 
                 <div className="p-4 border-t border-slate-100">
-                    <Link href="/" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all group font-semibold text-sm">
+                    <Link 
+                        href="/" 
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all group font-semibold text-sm"
+                    >
                         <LogOut size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
                         <span>Log Out</span>
                     </Link>

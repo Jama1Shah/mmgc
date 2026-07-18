@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Stethoscope,
@@ -15,6 +15,7 @@ import {
 
 const PatientSidebar = ({ isOpen, setIsOpen }) => {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { icon: <LayoutDashboard size={20} />, label: "Overview", href: "/patient-dashboard" },
@@ -23,6 +24,27 @@ const PatientSidebar = ({ isOpen, setIsOpen }) => {
     { icon: <FileText size={20} />, label: "Invoices", href: "/patient-dashboard/invoices" },
     { icon: <Settings size={20} />, label: "Settings", href: "/patient-dashboard/settings" }, // Added Settings Navigation
   ];
+
+  const handleLogout = (e) => {
+    e.preventDefault();
+    setIsOpen(false);
+
+    // 1. Clear active operational session storage
+    sessionStorage.clear();
+
+    // 2. Clear persistent history backups completely
+    localStorage.removeItem('user');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+
+    // 3. Clear client-side auth cookies explicitly
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+    // 4. Redirect them cleanly back to the login/landing gateway
+    router.push('/');
+  };
 
   return (
     <>
@@ -74,7 +96,7 @@ const PatientSidebar = ({ isOpen, setIsOpen }) => {
         <div className="p-4 border-t border-slate-100">
           <Link
             href="/"
-            onClick={() => setIsOpen(false)}
+            onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all group font-semibold text-sm"
           >
             <LogOut size={20} className="group-hover:translate-x-1 transition-transform duration-200" />

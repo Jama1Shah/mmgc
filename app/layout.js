@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import AuthProvider from "@/components/AuthProvider";
 import TabCookieSync from "@/components/TabCookieSync";
 import { Analytics } from "@vercel/analytics/next"
+import SessionInitializer from "@/components/SessionInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,9 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* Restores session data immediately from local storage if browser was restarted */}
+        <SessionInitializer />
+
         {/* Handles background multi-tab cookie syncing automatically */}
         <TabCookieSync />
 

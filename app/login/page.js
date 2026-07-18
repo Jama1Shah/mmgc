@@ -96,42 +96,54 @@ export default function LoginPage() {
         }
 
         if (data.user) {
-          // 🔍 SMART NAME DETECTOR
-          let detectedName = "";
+  // 🔍 SMART NAME DETECTOR
+  let detectedName = "";
 
-          const possibleKeys = ['name', 'fullName', 'username', 'firstName', 'displayName', 'patientName', 'customerName'];
-          for (let key of possibleKeys) {
-            if (data.user[key]) {
-              detectedName = data.user[key];
-              break;
-            }
-          }
+  const possibleKeys = ['name', 'fullName', 'username', 'firstName', 'displayName', 'patientName', 'customerName'];
+  for (let key of possibleKeys) {
+    if (data.user[key]) {
+      detectedName = data.user[key];
+      break;
+    }
+  }
 
-          if (!detectedName) {
-            const emailPrefix = data.user.email.split('@')[0];
-            detectedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-          }
+  if (!detectedName) {
+    const emailPrefix = data.user.email.split('@')[0];
+    detectedName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+  }
 
-          sessionStorage.setItem('user', JSON.stringify({
-            name: detectedName,
-            email: data.user.email,
-            role: data.user.role
-          }));
+  // --- SESSION STORAGE VALUES ---
+  sessionStorage.setItem('user', JSON.stringify({
+    name: detectedName,
+    email: data.user.email,
+    role: data.user.role
+  }));
 
-          sessionStorage.setItem('userEmail', data.user.email);
+  sessionStorage.setItem('userEmail', data.user.email);
 
-          // ========================================================
-          // ADDED: Tab Isolation Auth Storage
-          // ========================================================
-          const tokenFromCookie = document.cookie.split('; ').find(row => row.trim().startsWith('token='))?.split('=')[1];
-          const currentToken = data.token || data.user?.token || tokenFromCookie;
+  // --- LOCAL STORAGE BACKUP VALUES ---
+  localStorage.setItem('user', JSON.stringify({
+    name: detectedName,
+    email: data.user.email,
+    role: data.user.role
+  }));
 
-          if (currentToken) {
-            sessionStorage.setItem('token', currentToken);
-          }
-          sessionStorage.setItem('role', data.user.role);
-          // ========================================================
-        }
+  localStorage.setItem('userEmail', data.user.email);
+
+  // ========================================================
+  // ADDED: Tab Isolation Auth Storage
+  // ========================================================
+  const tokenFromCookie = document.cookie.split('; ').find(row => row.trim().startsWith('token='))?.split('=')[1];
+  const currentToken = data.token || data.user?.token || tokenFromCookie;
+
+  if (currentToken) {
+    sessionStorage.setItem('token', currentToken);
+    localStorage.setItem('token', currentToken); // Kept synchronized
+  }
+  sessionStorage.setItem('role', data.user.role);
+  localStorage.setItem('role', data.user.role); // Kept synchronized
+  // ========================================================
+}
 
         const rolePath = data.user.role.toLowerCase().replace(/\s+/g, '');
         router.push(`/${rolePath}-dashboard`);
