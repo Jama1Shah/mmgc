@@ -120,7 +120,6 @@ export default function BillingOverviewPage() {
                 }
                 return [...prev, createdInvoice];
               });
-              console.log(`Invoice created for appointment ${appt._id}`);
             }
           } catch (err) {
             console.error("Auto-save failed:", err);
