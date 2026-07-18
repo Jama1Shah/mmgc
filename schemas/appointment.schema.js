@@ -99,7 +99,7 @@ export const updateAppointmentSchema = z.object({
   reason: z.string().optional(),
   labReason: z.string().optional(),
   labNotes: z.string().optional(),
-  labFileUrl: z.string().optional(),
+  labFileUrl: z.string().nullable().optional(), // Updated to accept null for clearing assets seamlessly
   billPaid: z.boolean().optional(),
 }).refine(data => data.id || data._id, {
   message: "Appointment ID parameter (id or _id) is required",
