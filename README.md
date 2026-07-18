@@ -42,7 +42,7 @@ MMGC serves as a centralized platform for hospital administration, enabling effi
 | Feature | Description |
 |---|---|
 | 🔐 **Secure Authentication** | User registration and login using `bcryptjs` for robust password hashing |
-| 👥 **Role-Based Access Control** | Distinct dashboards and permissions for Admins, Doctors, and Patients |
+| 👥 **Role-Based Access Control** | Distinct dashboards and permissions for Admins, Doctors, Nurse, Lab Staff, Billing Staff and Patients |
 | ✉️ **Account Verification** | Automated email verification via `Nodemailer` and custom crypto tokens |
 | 🔑 **Password Management** | Secure "Forgot Password" flow with tokenized resets |
 | ⚙️ **Administrative Tools** | Automated admin account seeding and full user CRUD operations |
