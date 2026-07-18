@@ -60,7 +60,7 @@ export const authOptions = {
   },
   session: { strategy: "jwt" },
   // FIX: Added string fallback matching env config to prevent undefined secret crashes during compilation
-  secret: process.env.NEXTAUTH_SECRET || "357df9mmgchospitalmanagementsystemsecretkey2026",
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 // FIX: Destructure handlers from NextAuth to support the Auth.js v5 App Router runtime requirements natively
