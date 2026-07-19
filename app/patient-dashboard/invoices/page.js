@@ -156,6 +156,8 @@ const InvoicesPage = () => {
 
     return (
         <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+            
+                        <title>Invoices - MMGC</title>
             {/* Sidebar Navigation */}
             <PatientSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
@@ -301,7 +303,6 @@ const InvoicesPage = () => {
 
                 return (
                     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <title>Invoices - MMGC</title>
                         <div className="bg-white rounded-2xl max-w-md w-full shadow-xl border border-slate-100 overflow-hidden">
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                                 <div>

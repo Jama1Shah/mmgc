@@ -173,7 +173,7 @@ export default function PatientDashboard() {
 
     useEffect(() => {
         setIsMounted(true);
-        document.title = "MMGC Patient Dashboard";
+        document.title = "Dashboard - MMGC";
     }, []);
     
     const extractClinicalIntent = useCallback((reasonStr = '') => {
@@ -364,7 +364,6 @@ export default function PatientDashboard() {
 
     return (
         <div className="min-h-screen bg-slate-50 flex relative">
-            <title>Dashboard - MMGC</title>
             <PatientSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
             <main className="flex-1 w-full flex flex-col">

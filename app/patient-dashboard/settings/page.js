@@ -32,7 +32,7 @@ export default function PatientSettings() {
     const [feedback, setFeedback] = useState({ type: '', message: '' }); // type: 'success' | 'error'
 
     useEffect(() => {
-        document.title = "Account Settings - MMGC";
+        document.title = "Settings - MMGC";
         const email = sessionStorage.getItem('userEmail');
         if (!email) return;
         
