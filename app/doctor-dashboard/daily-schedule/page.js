@@ -53,136 +53,165 @@ const DailySchedule = () => {
 
   // --- Fetch and Synchronize Resilient Ecosystem Data ---
   useEffect(() => {
-    const fetchScheduleData = async () => {
-      try {
-        setLoading(true);
-        const userEmail = sessionStorage.getItem('userEmail');
+    const userEmail = sessionStorage.getItem('userEmail');
 
-        if (!userEmail) {
-          console.error("No user email found in workspace session.");
+    if (!userEmail) {
+      console.error("No user email found in workspace session.");
+      setLoading(false);
+      return;
+    }
+
+    // Stable reference to avoid redundant profile lookups on polling cycles
+    let resolvedDoctorName = "";
+
+    const fetchScheduleData = async (isSilent = false) => {
+      try {
+        if (!isSilent) setLoading(true);
+
+        // Resolve user profile safely via correct users routing schema
+        if (!resolvedDoctorName) {
+          const userRes = await fetch(`/api/users?email=${encodeURIComponent(userEmail)}`);
+          if (!userRes.ok) throw new Error("Failed to fetch user profile");
+          const userData = await userRes.json();
+
+          if (userData) {
+            resolvedDoctorName = userData.name;
+            setDoctor({ name: userData.name, email: userEmail });
+          }
+        }
+
+        if (!resolvedDoctorName) {
+          if (!isSilent) setLoading(false);
           return;
         }
 
-        const userRes = await fetch(`/api/appointments?email=${encodeURIComponent(userEmail)}`);
-        if (!userRes.ok) throw new Error("Failed to fetch user profile");
-        const userData = await userRes.json();
+        let liveAcceptedAppointments = [];
+        let apiCallSuccessful = false;
 
-        if (userData) {
-          setDoctor({ name: userData.name, email: userEmail });
-
-          let liveAcceptedAppointments = [];
-          let apiCallSuccessful = false;
-
-          try {
-            const queueRes = await fetch(`/api/appointments?doctorName=${encodeURIComponent(userData.name)}`);
-            if (queueRes.ok) {
-              const queueData = await queueRes.json();
-              
-              // Note: Prescribed items are filtered out of Daily Schedule so they migrate directly to Log History
-              // STRICT REQUIREMENT MATCHING: Only include "Accepted for Checkup"
-              liveAcceptedAppointments = queueData.filter(item => 
-                ["Accepted for Checkup"].includes(item.status) && !item.deletedByDoctor && item.status !== "Discharged"
-              );
-              apiCallSuccessful = true;
-            }
-          } catch (apiErr) {
-            console.warn("Live API collection dropped. Proceeding to secondary local cache system:", apiErr);
-          }
-
-          const savedHistory = localStorage.getItem(`history_${userEmail}`);
-          let localHistoryArray = savedHistory ? JSON.parse(savedHistory) : [];
-          
-          if (apiCallSuccessful) {
-            const liveIds = new Set(liveAcceptedAppointments.map(item => item._id));
+        try {
+          const queueRes = await fetch(`/api/appointments?doctorName=${encodeURIComponent(resolvedDoctorName)}`);
+          if (queueRes.ok) {
+            const queueData = await queueRes.json();
             
-            localHistoryArray = localHistoryArray.filter(item => {
-              if (["Accepted for Checkup"].includes(item.status)) {
-                return liveIds.has(item._id);
-              }
-              return true;
-            });
-
-            localStorage.setItem(`history_${userEmail}`, JSON.stringify(localHistoryArray));
+            // Note: Prescribed items are filtered out of Daily Schedule so they migrate directly to Log History
+            // STRICT REQUIREMENT MATCHING: Only include "Accepted for Checkup"
+            liveAcceptedAppointments = queueData.filter(item => 
+              ["Accepted for Checkup"].includes(item.status) && !item.deletedByDoctor && item.status !== "Discharged"
+            );
+            apiCallSuccessful = true;
           }
-
-          // STRICT REQUIREMENT MATCHING: Only include "Accepted for Checkup"
-          const localAcceptedAppointments = localHistoryArray.filter(item =>
-            ["Accepted for Checkup"].includes(item.status) && !item.deletedByDoctor && item.status !== "Discharged"
-          );
-
-          const rawSchedule = [...liveAcceptedAppointments, ...localAcceptedAppointments].filter(
-            (item, index, self) => item._id && self.findIndex(t => t._id === item._id) === index
-          );
-
-          // 🔄 Expanded Projection Engine: Project global Morning and Evening slots for everyday if patients are admitted
-          const consolidatedSchedule = [];
-          const admittedPatients = rawSchedule.filter(item => item.status === "Admitted");
-          const standardAppointments = rawSchedule.filter(item => item.status !== "Admitted");
-
-          // Push standard clinic appointments first
-          standardAppointments.forEach(item => {
-            consolidatedSchedule.push({
-              ...item,
-              originalId: item._id
-            });
-          });
-
-          // Inject generic Ward Round checkup cards twice a day if any patient is currently admitted
-          if (admittedPatients.length > 0) {
-            const todayStr = new Date().toLocaleDateString('en-CA'); // Safe YYYY-MM-DD local format
-            const uniqueDates = new Set(standardAppointments.map(item => item.date).filter(Boolean));
-            uniqueDates.add(todayStr); // Ensure the current active day is evaluated
-
-            uniqueDates.forEach(dateKey => {
-              const isMorningDone = localStorage.getItem(`checkup_ward_round_${dateKey}_morning`) === 'true';
-              const isEveningDone = localStorage.getItem(`checkup_ward_round_${dateKey}_evening`) === 'true';
-
-              if (!isMorningDone) {
-                consolidatedSchedule.push({
-                  _id: `ward_round_${dateKey}_morning`,
-                  originalId: `ward_round_${dateKey}_morning`,
-                  patientName: "Ward Round Checkup",
-                  date: dateKey,
-                  time: "09:00",
-                  status: "Admitted",
-                  shiftType: "morning",
-                  shiftLabel: "Morning Rounds Checkup",
-                  reason: "Inpatient Ward Rounds View"
-                });
-              }
-              if (!isEveningDone) {
-                consolidatedSchedule.push({
-                  _id: `ward_round_${dateKey}_evening`,
-                  originalId: `ward_round_${dateKey}_evening`,
-                  patientName: "Ward Round Checkup",
-                  date: dateKey,
-                  time: "17:00",
-                  status: "Admitted",
-                  shiftType: "evening",
-                  shiftLabel: "Evening Shift Handover Checkup",
-                  reason: "Inpatient Ward Rounds View"
-                });
-              }
-            });
-          }
-
-          // Sort by Date first, then by Time (Nearest to Farthest)
-          consolidatedSchedule.sort((a, b) => {
-            const dateCompare = (a.date || "").localeCompare(b.date || "");
-            if (dateCompare !== 0) return dateCompare;
-            return (a.time || "").localeCompare(b.time || "");
-          });
-
-          setAppointments(consolidatedSchedule);
+        } catch (apiErr) {
+          console.warn("Live API collection dropped. Proceeding to secondary local cache system:", apiErr);
         }
+
+        const savedHistory = localStorage.getItem(`history_${userEmail}`);
+        let localHistoryArray = savedHistory ? JSON.parse(savedHistory) : [];
+        
+        if (apiCallSuccessful) {
+          const liveIds = new Set(liveAcceptedAppointments.map(item => item._id));
+          
+          localHistoryArray = localHistoryArray.filter(item => {
+            if (["Accepted for Checkup"].includes(item.status)) {
+              return liveIds.has(item._id);
+            }
+            return true;
+          });
+
+          localStorage.setItem(`history_${userEmail}`, JSON.stringify(localHistoryArray));
+        }
+
+        // STRICT REQUIREMENT MATCHING: Only include "Accepted for Checkup"
+        const localAcceptedAppointments = localHistoryArray.filter(item =>
+          ["Accepted for Checkup"].includes(item.status) && !item.deletedByDoctor && item.status !== "Discharged"
+        );
+
+        const rawSchedule = [...liveAcceptedAppointments, ...localAcceptedAppointments].filter(
+          (item, index, self) => item._id && self.findIndex(t => t._id === item._id) === index
+        );
+
+        // 🔄 Expanded Projection Engine: Project global Morning and Evening slots for everyday if patients are admitted
+        const consolidatedSchedule = [];
+        const admittedPatients = rawSchedule.filter(item => item.status === "Admitted");
+        const standardAppointments = rawSchedule.filter(item => item.status !== "Admitted");
+
+        // Push standard clinic appointments first
+        standardAppointments.forEach(item => {
+          consolidatedSchedule.push({
+            ...item,
+            originalId: item._id
+          });
+        });
+
+        // Inject generic Ward Round checkup cards twice a day if any patient is currently admitted
+        if (admittedPatients.length > 0) {
+          const todayStr = new Date().toLocaleDateString('en-CA'); // Safe YYYY-MM-DD local format
+          const uniqueDates = new Set(standardAppointments.map(item => item.date).filter(Boolean));
+          uniqueDates.add(todayStr); // Ensure the current active day is evaluated
+
+          uniqueDates.forEach(dateKey => {
+            const isMorningDone = localStorage.getItem(`checkup_ward_round_${dateKey}_morning`) === 'true';
+            const isEveningDone = localStorage.getItem(`checkup_ward_round_${dateKey}_evening`) === 'true';
+
+            if (!isMorningDone) {
+              consolidatedSchedule.push({
+                _id: `ward_round_${dateKey}_morning`,
+                originalId: `ward_round_${dateKey}_morning`,
+                patientName: "Ward Round Checkup",
+                date: dateKey,
+                time: "09:00",
+                status: "Admitted",
+                shiftType: "morning",
+                shiftLabel: "Morning Rounds Checkup",
+                reason: "Inpatient Ward Rounds View"
+              });
+            }
+            if (!isEveningDone) {
+              consolidatedSchedule.push({
+                _id: `ward_round_${dateKey}_evening`,
+                originalId: `ward_round_${dateKey}_evening`,
+                patientName: "Ward Round Checkup",
+                date: dateKey,
+                time: "17:00",
+                status: "Admitted",
+                shiftType: "evening",
+                shiftLabel: "Evening Shift Handover Checkup",
+                reason: "Inpatient Ward Rounds View"
+              });
+            }
+          });
+        }
+
+        // Sort by Date first, then by Time (Nearest to Farthest)
+        consolidatedSchedule.sort((a, b) => {
+          const dateCompare = (a.date || "").localeCompare(b.date || "");
+          if (dateCompare !== 0) return dateCompare;
+          return (a.time || "").localeCompare(b.time || "");
+        });
+
+        setAppointments(consolidatedSchedule);
       } catch (err) {
         console.error("Schedule integration architecture failure:", err);
       } finally {
-        loading && setLoading(false);
+        if (!isSilent) setLoading(false);
       }
     };
 
-    fetchScheduleData();
+    // Trigger initial synchronous sequence execution loop
+    fetchScheduleData(false);
+
+    // Dynamic background poll sync engine matching the main dashboard timeline frequencies
+    const pollInterval = setInterval(() => {
+      fetchScheduleData(true);
+    }, 5000);
+
+    // Focus hook listeners catch instant real-time mutations when swapping browser tabs back and forth
+    const handleTabFocus = () => fetchScheduleData(true);
+    window.addEventListener('focus', handleTabFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleTabFocus);
+    };
   }, []);
 
   // --- Unified Delete Action Engine Trigger ---
