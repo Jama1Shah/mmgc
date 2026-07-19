@@ -525,6 +525,8 @@ const Prescriptions = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      
+                        <title>Prescriptions - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
@@ -767,7 +769,6 @@ const Prescriptions = () => {
 
                     return (
                       <div key={p._id} className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col justify-between group hover:border-blue-300 hover:shadow-md transition-all gap-3">
-                        <title>Prescriptions - MMGC</title>
                         <div className="flex items-start justify-between">
                           <div className="flex items-center space-x-4 min-w-0 flex-1">
                             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">

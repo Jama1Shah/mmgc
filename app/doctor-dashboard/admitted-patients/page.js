@@ -501,6 +501,8 @@ export default function DoctorAdmittedDashboard() {
 
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
+      
+                              <title>Admitted Patients - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <main className="flex-1 flex flex-col overflow-hidden">
         
@@ -721,7 +723,6 @@ export default function DoctorAdmittedDashboard() {
                             
                             return (
                               <>
-                              <title>Admitted Patients - MMGC</title>
                                 {textLogsArray.length > 0 ? (
                                   <div className="space-y-1.5">
                                     {textLogsArray.map((t, idx) => (

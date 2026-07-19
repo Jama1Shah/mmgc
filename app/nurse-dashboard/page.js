@@ -317,6 +317,8 @@ export default function MasterNurseDashboard() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+      
+                          <title>Dashboard - MMGC</title>
       <NurseSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <main className="flex-1 overflow-y-auto">
 
@@ -782,7 +784,6 @@ export default function MasterNurseDashboard() {
 
                       return (
                         <div key={p._id} className="p-5 flex flex-col space-y-3">
-                          <title>Dashboard - MMGC</title>
                           <div className="flex items-center justify-between w-full">
                             <div className="text-left">
                               <h4 className="font-bold text-slate-800 text-sm">{p.patientName}</h4>

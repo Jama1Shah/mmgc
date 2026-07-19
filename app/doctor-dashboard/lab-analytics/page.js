@@ -262,6 +262,7 @@ const LabAnalyticsContent = () => {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 gap-2">
+        <title>Lab Analytics - MMGC</title>
         <Loader2 className="animate-spin text-[#357DF9]" size={32} />
         <p className="text-sm font-semibold text-slate-500">Compiling analytical lab charts...</p>
       </div>
@@ -307,7 +308,7 @@ const LabAnalyticsContent = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
-     <title>Lab Analytics - MMGC</title>
+     
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 max-w-5xl mx-auto w-full">
