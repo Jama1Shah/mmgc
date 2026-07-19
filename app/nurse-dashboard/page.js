@@ -311,8 +311,6 @@ export default function MasterNurseDashboard() {
     }
   };
 
-  const missingVitalsCount = patients.filter(p => !p.vitalsChecked).length;
-
   // Dynamic Multi-Ward Tab Filtering Engine
   const uniqueWards = ['All Wards', ...Array.from(new Set(patients.map(p => p.ward).filter(Boolean)))];
   const filteredPatients = activeTab === 'All Wards' ? patients : patients.filter(p => p.ward === activeTab);

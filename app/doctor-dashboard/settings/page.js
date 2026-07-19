@@ -1,11 +1,8 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import DoctorSidebar from '@/components/DoctorSidebar';
 import { 
   Menu, 
-  Activity, 
-  X, 
   Lock, 
   Eye, 
   EyeOff, 

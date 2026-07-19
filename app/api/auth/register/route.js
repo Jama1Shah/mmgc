@@ -17,8 +17,8 @@ export async function GET(req) {
     const email = searchParams.get('email');
 
     if (email) {
-      // Validate the email query parameter
-      const validation = getUserSchema.safeParse(email);
+      // Validate the email query parameter (Wrapped in an object to match Zod object schema)
+      const validation = getUserSchema.safeParse({ email });
       if (!validation.success) {
         return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
       }
@@ -53,7 +53,7 @@ export async function POST(req) {
         pass: process.env.EMAIL_PASS, // MUST BE A GOOGLE APP PASSWORD
       },
     });
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
 
     // Handle explicit standalone resend action from the frontend button
     if (body.action === 'resend') {
@@ -120,7 +120,6 @@ export async function POST(req) {
         existingUser.password = hashedPassword;
         existingUser.role = role;
         existingUser.dept = dept;
-        existingUser.status = status || 'Active';
 
         // If explicitly set to verified by admin, save straightaway without resetting verification tokens
         if (isVerifiedValue) {

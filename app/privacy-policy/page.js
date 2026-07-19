@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-bold text-gray-900 mb-3">1. Introduction</h2>
               <p>
-                MMGC Healthcare ("we," "us," or "our") is committed to protecting your personal and medical information. 
+                MMGC Healthcare is committed to protecting your personal and medical information. 
                 This policy explains how we collect, use, and safeguard the data within our Medical Management & General Care System. 
                 Your privacy is paramount to our healthcare service delivery.
               </p>

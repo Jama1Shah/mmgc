@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import BillingStaffSidebar from '@/components/BillingStaffSidebar';
 import {
   Menu,
@@ -17,7 +16,6 @@ export default function BillingOverviewPage() {
   const [labTests, setLabTests] = useState([]);
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [invoices, setInvoices] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [wards, setWards] = useState([]);
 
   // ✅ BILL CALCULATION REDIRECTED TO THE BACKEND

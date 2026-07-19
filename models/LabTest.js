@@ -11,7 +11,7 @@ const LabTestSchema = new mongoose.Schema(
     baseCost: {
       type: Number,
       required: [true, 'Lab panel billing cost is required'],
-      default: 0 
+      default: 1000 
     }
   },
   {

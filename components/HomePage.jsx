@@ -90,7 +90,7 @@ export default function HomePage() {
                     </div>
                 </div>
             </section>
-            
+
             <hr className="border-gray-100" />
 
             {/* ROLES */}
@@ -166,88 +166,38 @@ const features = [
     {
         title: "Multi-role access control",
         desc: "Admins, doctors, nurses, lab staff, billing staff and patients with secure permissions.",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-8 w-8 text-blue-500 block"
-            >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-        ),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "Comprehensive medical records",
         desc: "Complete patient history, diagnoses, and prescriptions.",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-8 w-8 text-blue-500 block"
-            >
-                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
-                <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
-                <path d="M10 9H8"></path>
-                <path d="M16 13H8"></path>
-                <path d="M16 17H8"></path>
-            </svg>
-        ),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "HIPAA compliant security",
         desc: "Enterprise-grade security for patient data protection.",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-8 w-8 text-blue-500 block"
-            >
-                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path>
-            </svg>
-        ),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "Real-time updates",
         desc: "Instant synchronization across all departments.",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-8 w-8 text-blue-500 block"
-            >
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-        ),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
 ];
 
@@ -255,92 +205,47 @@ const roles = [
     {
         title: "Doctors",
         desc: "Manage patient records and prescriptions.",
-        icon: (<svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-blue-600 bg-blue-100 rounded-full p-1"
-        >
-            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-        </svg>),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "Nurses",
         desc: "Monitor patient care and vital signs.",
-        icon: (<svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-blue-600 bg-blue-100 rounded-full p-1"
-        >
-            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-        </svg>),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "Lab Staff",
         desc: "Upload and manage test results.",
-        icon: (<svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-blue-600 bg-blue-100 rounded-full p-1"
-        >
-            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-        </svg>),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "Billing Staff",
         desc: "Seamlessly handle invoices and payments.",
-        icon: (<svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-blue-600 bg-blue-100 rounded-full p-1"
-        >
-            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-        </svg>),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         title: "Patients",
         desc: "Access personal health records.",
-        icon: (<svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-blue-600 bg-blue-100 rounded-full p-1"
-        >
-            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-        </svg>),
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
 ];
 
@@ -348,66 +253,26 @@ const stats = [
     {
         value: "2,847 patients",
         label: "Active in system",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-6 w-6 text-blue-500"
-            >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-        )
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         value: "12,483 records", label: "Medical records managed",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-6 w-6 text-red-500"
-            >
-                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
-                <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
-                <path d="M10 9H8"></path>
-                <path d="M16 13H8"></path>
-                <path d="M16 17H8"></path>
-            </svg>
-        )
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
     {
         value: "100% secure", label: "HIPAA compliant",
-        icon: (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-6 w-6 text-green-500"
-            >
-                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path>
-            </svg>
-        )
+        icons: {
+            icon: '/mmgc-svg.svg',
+            shortcut: '/mmgc-svg.svg',
+            apple: '/mmgc-svg.svg',
+        },
     },
 ];

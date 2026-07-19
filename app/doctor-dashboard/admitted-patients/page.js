@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { 
-  Menu, Bed, Heart, Pill, TestTube, FileText, 
+  Menu, Bed, TestTube, FileText, 
   LogOut, ShieldAlert, CheckCircle2, RefreshCw, Activity, Search, ExternalLink, Plus, PillBottle, AlertCircle, X
 } from 'lucide-react';
 import DoctorSidebar from '@/components/DoctorSidebar';

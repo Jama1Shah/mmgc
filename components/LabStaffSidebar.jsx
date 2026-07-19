@@ -5,8 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
     Beaker, 
     Settings, 
-    ClipboardCheck, 
-    Package, 
     LogOut, 
     Activity,
     X

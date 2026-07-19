@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Menu, Plus } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import DoctorSidebar from '@/components/DoctorSidebar';
 

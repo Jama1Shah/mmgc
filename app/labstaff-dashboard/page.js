@@ -3,7 +3,7 @@
 import LabStaffSidebar from '@/components/LabStaffSidebar';
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Loader2, Upload, FileText, CheckCircle, ExternalLink, Trash2, Archive, ListFilter, Files } from 'lucide-react'; 
-import { BeakerIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { BeakerIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 const LabStaffDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

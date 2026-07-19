@@ -3,8 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DoctorSidebar from '@/components/DoctorSidebar';
-import Link from 'next/link';
-import { Loader2, ArrowLeft, Clipboard, ShieldAlert, FileText, Download, Calendar, User, FileEdit, ExternalLink, Plus } from 'lucide-react';
+import { Loader2, Clipboard, ShieldAlert, FileText, Download, Calendar, User, FileEdit, ExternalLink, Plus } from 'lucide-react';
 
 const LabAnalyticsContent = () => {
   const searchParams = useSearchParams();

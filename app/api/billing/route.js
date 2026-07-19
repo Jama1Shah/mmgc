@@ -9,6 +9,9 @@ import mongoose from 'mongoose';
 // Importing the security schemas
 import { PostInvoiceSchema, PutInvoiceSchema, DeleteInvoiceSchema } from '@/schemas/billing';
 
+// Force Next.js to execute this route dynamically on every request to prevent stale build-time caching
+export const dynamic = 'force-dynamic';
+
 // Inline safe schema evaluation for the Prescription collection to prevent Next.js context compilation errors
 const Prescription = mongoose.models.Prescription || mongoose.model('Prescription', new mongoose.Schema({
   appointmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' },

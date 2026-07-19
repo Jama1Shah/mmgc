@@ -3,6 +3,9 @@ import mmgc_db from '@/lib/mmgc_db';
 import LabTest from '@/models/LabTest'; 
 import { LabTestPostSchema, LabTestPutSchema, LabTestDeleteSchema } from '@/schemas/labTest';
 
+// Force Next.js to execute this route dynamically on every request to prevent stale build-time caching
+export const dynamic = 'force-dynamic';
+
 // Baseline layout tests configured directly with local currency PKR valuation structures
 const BASELINE_TESTS = [
   { name: "Basic Metabolic Panel (BMP)", cost: 1200 },
@@ -127,8 +130,6 @@ export async function PUT(req) {
     if (!targetTest) {
       return NextResponse.json({ error: "Target laboratory test panel profile not found." }, { status: 404 });
     }
-
-    const previousDocumentName = targetTest.name;
 
     // Mutate and apply values to the targeted schema properties
     targetTest.name = trimmedTargetName || targetTest.name;

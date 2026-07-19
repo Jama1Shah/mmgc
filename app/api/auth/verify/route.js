@@ -31,7 +31,7 @@ export async function GET(req) {
     await user.save();
 
     // Redirect user to the login client view page upon success
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
     return NextResponse.redirect(new URL('/login', baseUrl));
   } catch (error) {
     console.error("Token Verification Error:", error);

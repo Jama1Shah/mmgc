@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect, useRef } from 'react';
-import { CirclePlus, PillBottle, FileText, Menu, Trash2, Edit3, X, Check, Bed, Plus, TestTube, Save, ExternalLink } from 'lucide-react';
+import { CirclePlus, PillBottle, FileText, Menu, Trash2, Edit3, X, Check, Bed, Plus, TestTube, ExternalLink } from 'lucide-react';
 import DoctorSidebar from '@/components/DoctorSidebar';
 
 const DOSAGE_TIMINGS = ['Stat', 'OD', 'BDS', 'TDS', 'QID'];
@@ -464,16 +464,16 @@ const Prescriptions = () => {
     }
   };
 
-  const handleDeleteRx = (id, appointmentId) => {
+  const handleDeleteRx = (id) => {
     setCustomAlert({
       isOpen: true,
       message: "Are you sure you want to delete this prescription history item?",
       isConfirm: true,
-      onConfirm: () => executeDeleteRx(id, appointmentId)
+      onConfirm: () => executeDeleteRx(id)
     });
   };
 
-  const executeDeleteRx = async (id, appointmentId) => {
+  const executeDeleteRx = async (id) => {
     try {
       const response = await fetch(`/api/prescriptions?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (response.ok) {
@@ -788,7 +788,7 @@ const Prescriptions = () => {
                             <button onClick={() => startEditing(p)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit Medication Details">
                               <Edit3 size={15} />
                             </button>
-                            <button onClick={() => handleDeleteRx(p._id, p.appointmentId?._id || p.appointmentId)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Record">
+                            <button onClick={() => handleDeleteRx(p._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete Record">
                               <Trash2 size={15} />
                             </button>
                           </div>
