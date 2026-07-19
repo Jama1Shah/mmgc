@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Menu, Calendar as CalendarIcon, MoreVertical, Activity, Trash2, FileText, FlaskConical, Stethoscope } from 'lucide-react';
+import { Clock, Menu, Calendar as CalendarIcon, MoreVertical, Activity, Trash2, FileText, FlaskConical, Stethoscope, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DoctorSidebar from '@/components/DoctorSidebar';
 
@@ -12,6 +12,14 @@ const DailySchedule = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeMenuId, setActiveMenuId] = useState(null); // Track which row menu dropdown is visible
+
+  // --- Custom Confirmation Modal State ---
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    appointmentId: null
+  });
 
   // --- Core Application States ---
   const [doctor, setDoctor] = useState({ name: "", email: "" });
@@ -31,6 +39,18 @@ const DailySchedule = () => {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
+  // --- Handle Keyboard Enter Key Capture for Confirmation Modal ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (confirmModal.isOpen && e.key === 'Enter') {
+        e.preventDefault();
+        executeDelete(confirmModal.appointmentId);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmModal.isOpen, confirmModal.appointmentId, appointments]);
+
   // --- Fetch and Synchronize Resilient Ecosystem Data ---
   useEffect(() => {
     const fetchScheduleData = async () => {
@@ -43,7 +63,7 @@ const DailySchedule = () => {
           return;
         }
 
-        const userRes = await fetch(`/api/users?email=${encodeURIComponent(userEmail)}`);
+        const userRes = await fetch(`/api/appointments?email=${encodeURIComponent(userEmail)}`);
         if (!userRes.ok) throw new Error("Failed to fetch user profile");
         const userData = await userRes.json();
 
@@ -165,11 +185,19 @@ const DailySchedule = () => {
     fetchScheduleData();
   }, []);
 
-  // --- Unified Delete Action Engine ---
-  const handleDelete = async (appointmentId) => {
-    if (!window.confirm("Are you sure you want to remove this appointment from your daily schedule?")) {
-      return;
-    }
+  // --- Unified Delete Action Engine Trigger ---
+  const handleDelete = (appointmentId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Remove Appointment",
+      message: "Are you sure you want to remove this appointment from your daily schedule?",
+      appointmentId: appointmentId
+    });
+  };
+
+  // --- Executable Logic After Confirmation via click or enter keypress ---
+  const executeDelete = async (appointmentId) => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     // Resolve original entity identifier keys mapping to preserve database records integrity
     const target = appointments.find(app => app._id === appointmentId);
@@ -184,7 +212,7 @@ const DailySchedule = () => {
       const response = await fetch(`/api/appointments?id=${encodeURIComponent(resolvedId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deletedByDoctor: true })
+        body: JSON.stringify({ deletedByDoctor: true, status: 'Rejected' })
       });
 
       if (!response.ok) {
@@ -197,7 +225,7 @@ const DailySchedule = () => {
         if (savedHistory) {
           const localHistoryArray = JSON.parse(savedHistory);
           const updatedHistoryArray = localHistoryArray.map(item => 
-            item._id === resolvedId ? { ...item, deletedByDoctor: true } : item
+            item._id === resolvedId ? { ...item, deletedByDoctor: true, status: 'Rejected' } : item
           );
           localStorage.setItem(`history_${doctor.email}`, JSON.stringify(updatedHistoryArray));
         }
@@ -494,6 +522,37 @@ const DailySchedule = () => {
           </div>
         </div>
       </main>
+
+      {/* --- MATCHING CUSTOM UI CONFIRMATION MODAL --- */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 transition-all">
+          <div className="bg-white border border-slate-200 rounded-[28px] max-w-sm w-full p-6 md:p-8 shadow-xl text-center transform scale-100 transition-all">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-red-50 rounded-full text-red-600 border border-red-100">
+                <AlertCircle size={32} />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{confirmModal.title}</h3>
+            <p className="text-sm text-slate-600 mb-6 leading-relaxed">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => executeDelete(confirmModal.appointmentId)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md"
+              >
+                Yes, Remove
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3 rounded-xl font-bold text-sm transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
