@@ -336,7 +336,7 @@ const BookingForm = () => {
                                         onChange={handleInputChange}
                                     >
                                         <option value="">Select Specialty</option>
-                                        {Object.keys(specialtyMap).map(s => <option key={s} value={s}>{s}</option>)}
+                                        {Object.keys(specialtyMap).sort((a, b) => a.localeCompare(b)).map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
 
@@ -351,7 +351,7 @@ const BookingForm = () => {
                                         onChange={handleInputChange}
                                     >
                                         <option value="">Select Doctor</option>
-                                        {bookingDetails.specialty && specialtyMap[bookingDetails.specialty]?.map(d => <option key={d} value={d}>{d}</option>)}
+                                        {bookingDetails.specialty && [...(specialtyMap[bookingDetails.specialty] || [])].sort((a, b) => a.localeCompare(b)).map(d => <option key={d} value={d}>{d}</option>)}
                                     </select>
                                 </div>
 
