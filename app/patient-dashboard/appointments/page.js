@@ -170,7 +170,7 @@ const AppointmentsPage = () => {
             doctor: apt.doctorName,
             specialty: apt.specialty
         }).toString();
-        window.location.href = `/book-appointment?${query}`;
+        window.location.href = `/patient-dashboard/book-appointment?${query}`;
     };
 
     // Cancel handler
