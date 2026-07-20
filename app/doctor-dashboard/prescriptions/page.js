@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CirclePlus, PillBottle, FileText, Menu, Trash2, Edit3, X, Check, Bed, Plus, TestTube, ExternalLink } from 'lucide-react';
 import DoctorSidebar from '@/components/DoctorSidebar';
 
@@ -234,25 +234,33 @@ const Prescriptions = () => {
     return isAcceptedStatus && (matchName || matchReason);
   });
 
-  // --- Derive Lab Tests Already Completed For The Currently Selected Patient ---
-  // Scans this patient's previously issued prescriptions and collects any lab panel
-  // names tied to a completed lab status, so the admission Lab Panel Sample Requester
-  // dropdown can exclude tests that have already been done for them.
-  const patientCompletedLabTests = new Set(
-    selectedAppointment
-      ? recentPrescriptions
-          .filter(p => {
-            const targetPatientEmail = p.patientEmail || p.appointmentId?.patientEmail;
-            const targetLabStatus = p.labStatus || p.appointmentId?.labStatus;
-            return targetPatientEmail && selectedAppointment.patientEmail &&
-              targetPatientEmail.toLowerCase() === selectedAppointment.patientEmail.toLowerCase() &&
-              targetLabStatus === 'Completed';
-          })
-          .flatMap(p => {
-            const targetLabPrescription = p.labPrescription || p.appointmentId?.labPrescription || '';
-            return targetLabPrescription.split(',').map(name => name.trim()).filter(Boolean);
-          })
-      : []
+  // --- Derive Lab Tests Already Requested/Completed For The Currently Selected Patient's Appointment ---
+  // Scans previously issued prescriptions tied to this exact appointment and collects the lab
+  // test names already logged against it, so they can be excluded from the Lab Panel Sample
+  // Requester dropdown (prevents re-ordering a test already done for this same appointment).
+  const alreadyDoneLabTestNames = useMemo(() => {
+    const doneSet = new Set();
+    if (!selectedAppointment) return doneSet;
+
+    recentPrescriptions.forEach(rx => {
+      const rxAppointmentId = rx.appointmentId?._id || rx.appointmentId;
+      if (rxAppointmentId !== selectedAppointment._id) return;
+
+      const rxLabPrescription = rx.labPrescription || rx.appointmentId?.labPrescription;
+      if (rxLabPrescription) {
+        String(rxLabPrescription).split(',').forEach(entry => {
+          const trimmedEntry = entry.trim();
+          if (trimmedEntry) doneSet.add(trimmedEntry.toLowerCase());
+        });
+      }
+    });
+
+    return doneSet;
+  }, [recentPrescriptions, selectedAppointment]);
+
+  // --- Lab Catalog Filtered For The Sample Requester Dropdown (Admission Panel Only) ---
+  const availableLabsForRequester = labsCatalog.filter(
+    lab => !alreadyDoneLabTestNames.has(lab.testName.toLowerCase())
   );
 
   // --- Dynamic Ward Submission Handler & Database Sync ---
@@ -732,9 +740,7 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {labsCatalog
-                              .filter(lab => !patientCompletedLabTests.has(lab.testName))
-                              .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {availableLabsForRequester.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request
