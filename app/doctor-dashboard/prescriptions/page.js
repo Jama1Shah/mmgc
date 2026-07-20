@@ -60,6 +60,59 @@ const Prescriptions = () => {
 
   const dropdownRef = useRef(null);
 
+  // --- Extract Already Done / Ordered Lab Tests for Selected Appointment ---
+  const doneLabTests = useMemo(() => {
+    if (!selectedAppointment) return [];
+    const doneSet = new Set();
+
+    const matchingRx = recentPrescriptions.find(
+      p => String(p.appointmentId?._id || p.appointmentId) === String(selectedAppointment._id)
+    );
+
+    const processStr = (str) => {
+      if (!str) return;
+      const s = String(str).trim();
+      if (s.startsWith('[')) {
+        try {
+          const arr = JSON.parse(s);
+          if (Array.isArray(arr)) {
+            arr.forEach(item => {
+              if (item && item.testName) {
+                doneSet.add(item.testName.trim().toLowerCase());
+              }
+            });
+          }
+        } catch (e) {}
+      } else if (s && s !== "No active lab orders listed." && s !== "Diagnostic Panels Ordered") {
+        s.split(',').forEach(t => {
+          if (t.trim()) doneSet.add(t.trim().toLowerCase());
+        });
+      }
+    };
+
+    // Check appointment lab fields
+    processStr(selectedAppointment.labNotes);
+    processStr(selectedAppointment.labFileUrl);
+    processStr(selectedAppointment.labPrescription);
+    processStr(selectedAppointment.labReason);
+
+    if (selectedAppointment.reason) {
+      const labsMatch = selectedAppointment.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
+      if (labsMatch && labsMatch[1]) {
+        processStr(labsMatch[1]);
+      }
+    }
+
+    // Check prescription lab fields
+    if (matchingRx) {
+      processStr(matchingRx.labNotes);
+      processStr(matchingRx.labFileUrl);
+      processStr(matchingRx.labPrescription);
+    }
+
+    return Array.from(doneSet);
+  }, [selectedAppointment, recentPrescriptions]);
+
   // --- Custom Notification Helper ---
   const showAlert = (message) => {
     setCustomAlert({
@@ -233,35 +286,6 @@ const Prescriptions = () => {
     const matchReason = (appt.reason || "").toLowerCase().includes(searchQuery.toLowerCase());
     return isAcceptedStatus && (matchName || matchReason);
   });
-
-  // --- Derive Lab Tests Already Requested/Completed For The Currently Selected Patient's Appointment ---
-  // Scans previously issued prescriptions tied to this exact appointment and collects the lab
-  // test names already logged against it, so they can be excluded from the Lab Panel Sample
-  // Requester dropdown (prevents re-ordering a test already done for this same appointment).
-  const alreadyDoneLabTestNames = useMemo(() => {
-    const doneSet = new Set();
-    if (!selectedAppointment) return doneSet;
-
-    recentPrescriptions.forEach(rx => {
-      const rxAppointmentId = rx.appointmentId?._id || rx.appointmentId;
-      if (rxAppointmentId !== selectedAppointment._id) return;
-
-      const rxLabPrescription = rx.labPrescription || rx.appointmentId?.labPrescription;
-      if (rxLabPrescription) {
-        String(rxLabPrescription).split(',').forEach(entry => {
-          const trimmedEntry = entry.trim();
-          if (trimmedEntry) doneSet.add(trimmedEntry.toLowerCase());
-        });
-      }
-    });
-
-    return doneSet;
-  }, [recentPrescriptions, selectedAppointment]);
-
-  // --- Lab Catalog Filtered For The Sample Requester Dropdown (Admission Panel Only) ---
-  const availableLabsForRequester = labsCatalog.filter(
-    lab => !alreadyDoneLabTestNames.has(lab.testName.toLowerCase())
-  );
 
   // --- Dynamic Ward Submission Handler & Database Sync ---
   const handleAddCustomWard = async () => {
@@ -740,7 +764,17 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {availableLabsForRequester.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {labsCatalog
+                              .filter(lab => {
+                                if (!needsAdmission || !selectedAppointment) return true;
+                                const labNameLower = lab.testName.trim().toLowerCase();
+                                return !doneLabTests.some(doneName => 
+                                  doneName === labNameLower || 
+                                  labNameLower.includes(doneName) || 
+                                  doneName.includes(labNameLower)
+                                );
+                              })
+                              .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request
@@ -874,30 +908,37 @@ const Prescriptions = () => {
 
                                   {/* Lab File Attachment Matrix Map */}
                                   {attachmentUrlsArray.length > 0 ? (
-                                    <div className="pt-2 border-t border-slate-100 flex flex-col space-y-1">
-                                      {attachmentUrlsArray.map((fileObj, idx) => (
-                                        <div key={idx} className="flex items-center justify-between text-[11px] bg-slate-50 border rounded-lg p-1.5 px-2.5">
-                                          <span className="font-semibold text-slate-500 truncate max-w-[65%]">{fileObj.testName || "Result File"}</span>
-                                          <div className="flex gap-1.5">
-                                            {fileObj.urls && Array.isArray(fileObj.urls) ? (
-                                              fileObj.urls.map((url, uIdx) => (
-                                                <a key={uIdx} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5 font-bold">
-                                                  Doc {uIdx + 1} <ExternalLink size={10} />
-                                                </a>
-                                              ))
-                                            ) : (
-                                              <a href={fileObj.url || fileObj} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5 font-bold">
-                                                View File <ExternalLink size={10} />
+                                    <div className="space-y-2 pt-1">
+                                      {attachmentUrlsArray.map((entry, idx) => (
+                                        <div key={idx} className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                          <p className="text-[11px] font-bold text-slate-700 mb-1">
+                                            📄 Attached File(s): <span className="text-blue-600">{entry.testName}</span>
+                                          </p>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {Array.isArray(entry.urls) && entry.urls.map((url, uIdx) => (
+                                              <a
+                                                key={uIdx}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center text-[10px] bg-blue-600 text-white font-bold px-2 py-1 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                              >
+                                                View Document #{uIdx + 1} <ExternalLink size={10} className="ml-1" />
                                               </a>
-                                            )}
+                                            ))}
                                           </div>
                                         </div>
                                       ))}
                                     </div>
                                   ) : targetLabFileUrl && (
-                                    <div className="pt-2 border-t border-slate-100">
-                                      <a href={targetLabFileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 font-bold">
-                                        View Diagnostic Attachment Report <ExternalLink size={12} />
+                                    <div className="pt-1">
+                                      <a
+                                        href={targetLabFileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center text-xs bg-blue-600 text-white font-bold px-3 py-1.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                                      >
+                                        View Diagnostic File Attachment <ExternalLink size={12} className="ml-1.5" />
                                       </a>
                                     </div>
                                   )}
@@ -910,131 +951,113 @@ const Prescriptions = () => {
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200 px-4">
-                    <FileText size={32} className="mx-auto text-slate-200 mb-2" />
-                    <p className="text-xs text-slate-400 italic">No historical action tracking records found.</p>
+                  <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center">
+                    <p className="text-xs font-bold text-slate-400">No recent prescriptions issued.</p>
                   </div>
                 )}
               </div>
             </div>
+
           </div>
         </div>
       </main>
 
-      {/* --- MODAL 1: ADD CUSTOM HOSPITAL WARD --- */}
+      {/* --- CUSTOM MODAL FOR ADDING NEW WARD --- */}
       {showCustomWardModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl border border-slate-100 text-left">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Create Custom Hospital Ward</h3>
-              <button onClick={() => { setShowCustomWardModal(false); setNewWardName(""); setNewWardSpecialty(""); }} className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-colors">
-                <X size={18} />
-              </button>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-800 text-base">Register Custom Ward Sector</h3>
+              <button onClick={() => setShowCustomWardModal(false)} className="text-slate-400 hover:text-slate-600 p-1"><X size={18} /></button>
             </div>
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 ml-1">Ward Name Label</label>
-                <input type="text" value={newWardName} onChange={(e) => setNewWardName(e.target.value)} placeholder="e.g., Ward A, Emergency ICU" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Ward Name</label>
+                <input type="text" value={newWardName} onChange={(e) => setNewWardName(e.target.value)} placeholder="e.g. ICU Wing B" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-blue-500" />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 ml-1">Clinical Specialty Sector</label>
-                <input type="text" value={newWardSpecialty} onChange={(e) => setNewWardSpecialty(e.target.value)} placeholder="e.g., General Medicine, Pediatrics" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Specialty Category</label>
+                <input type="text" value={newWardSpecialty} onChange={(e) => setNewWardSpecialty(e.target.value)} placeholder="e.g. Critical Care" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-blue-500" />
               </div>
             </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => { setShowCustomWardModal(false); setNewWardName(""); setNewWardSpecialty(""); }} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200">Cancel</button>
-              <button type="button" onClick={handleAddCustomWard} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl text-xs hover:bg-blue-700">Save Ward to DB</button>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setShowCustomWardModal(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button onClick={handleAddCustomWard} className="px-4 py-2 text-xs font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700">Save Ward</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- MODAL 2: DIRECT ADD CUSTOM MEDICINE FORMULA --- */}
+      {/* --- CUSTOM MODAL FOR ADDING NEW MEDICINE --- */}
       {showCustomMedicineModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-left">
-            <h3 className="text-md font-extrabold text-slate-900 mb-4">Register New Medicine Formula</h3>
-            <div className="mb-4">
-              <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Compound Description Title</label>
-              <input type="text" value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g., Cap Amoxicillin 500mg" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-800 text-base">Register Drug Compound Formula</h3>
+              <button onClick={() => setShowCustomMedicineModal(false)} className="text-slate-400 hover:text-slate-600 p-1"><X size={18} /></button>
             </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setShowCustomMedicineModal(false); setNewMedicineName(""); }} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold rounded-xl">Cancel</button>
-              <button type="button" onClick={handleAddCustomMedicine} className="flex-1 py-2.5 bg-emerald-600 text-white font-black text-xs rounded-xl hover:bg-emerald-700">Commit to DB</button>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Medicine Name & Formula</label>
+              <input type="text" value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g. Augmentin 625mg" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-emerald-500" />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setShowCustomMedicineModal(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button onClick={handleAddCustomMedicine} className="px-4 py-2 text-xs font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700">Save Medicine</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- MODAL 3: DIRECT ADD CUSTOM DIAGNOSTIC TEST PROFILE --- */}
+      {/* --- CUSTOM MODAL FOR ADDING NEW LAB TEST --- */}
       {showCustomLabModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-left">
-            <h3 className="text-md font-extrabold text-slate-900 mb-4">Register Diagnostic Panel Test</h3>
-            <div className="mb-4">
-              <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Lab Test Label Title</label>
-              <input type="text" value={newLabTestName} onChange={(e) => setNewLabTestName(e.target.value)} placeholder="e.g., Serum Electrolytes Panel" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-800 text-base">Register Laboratory Panel Profile</h3>
+              <button onClick={() => setShowCustomLabModal(false)} className="text-slate-400 hover:text-slate-600 p-1"><X size={18} /></button>
             </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setShowCustomLabModal(false); setNewLabTestName(""); }} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold rounded-xl">Cancel</button>
-              <button type="button" onClick={handleAddCustomLabTest} className="flex-1 py-2.5 bg-purple-600 text-white font-black text-xs rounded-xl hover:bg-purple-700">Save System Catalog</button>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Diagnostic Test Profile Title</label>
+              <input type="text" value={newLabTestName} onChange={(e) => setNewLabTestName(e.target.value)} placeholder="e.g. Serum Electrolytes Panel" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-purple-500" />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setShowCustomLabModal(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl">Cancel</button>
+              <button onClick={handleAddCustomLabTest} className="px-4 py-2 text-xs font-bold bg-purple-600 text-white rounded-xl hover:bg-purple-700">Save Lab Test</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- MODAL 4: SYSTEM CUSTOM ALERT / CONFIRMATION MATRIX --- */}
+      {/* --- CUSTOM ALERT MODAL --- */}
       {customAlert.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 text-left">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                {customAlert.isConfirm ? "Action Confirmation" : "Clinical Notification"}
-              </h3>
-              <button 
-                onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))} 
-                className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <p className="text-xs font-medium text-slate-600 mb-8 leading-relaxed whitespace-pre-line">
-              {customAlert.message}
-            </p>
-
-            <div className="flex gap-3">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl space-y-4 text-center animate-scaleUp">
+            <p className="text-sm font-bold text-slate-800">{customAlert.message}</p>
+            <div className="flex justify-center gap-2 pt-2">
               {customAlert.isConfirm ? (
                 <>
                   <button 
-                    type="button" 
                     onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))} 
-                    className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200 transition-colors"
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
                   >
                     Cancel
                   </button>
                   <button 
-                    type="button" 
                     onClick={() => {
                       if (customAlert.onConfirm) customAlert.onConfirm();
                       setCustomAlert(prev => ({ ...prev, isOpen: false }));
                     }} 
-                    className={`flex-1 py-3 text-white font-black text-xs rounded-xl transition-colors ${
-                      customAlert.message.toLowerCase().includes("delete") 
-                        ? "bg-rose-600 hover:bg-rose-700" 
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
+                    className="px-4 py-2 text-xs font-bold bg-rose-600 text-white rounded-xl hover:bg-rose-700"
                   >
-                    {customAlert.message.toLowerCase().includes("delete") ? "Confirm Delete" : "Confirm Action"}
+                    Confirm Delete
                   </button>
                 </>
               ) : (
                 <button 
-                  type="button" 
                   onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))} 
-                  className="w-full py-3 bg-blue-600 text-white font-black text-xs rounded-xl hover:bg-blue-700 transition-colors"
+                  className="px-5 py-2.5 text-xs font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
-                  Acknowledge
+                  Okay
                 </button>
               )}
             </div>
