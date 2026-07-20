@@ -69,8 +69,8 @@ async function calculateBackendInvoice(appointmentId) {
   }
 
   // Fetch from all prescriptions associated with this appointment to capture tests ordered during/after admission
+  let prescriptionList = [];
   try {
-    let prescriptionList = [];
     try {
       prescriptionList = await Prescription.find({
         $or: [{ appointmentId: appt._id }, { appointmentId: appt._id.toString() }]
@@ -119,6 +119,17 @@ async function calculateBackendInvoice(appointmentId) {
     }
   });
 
+  // Collect notes and file sources from both the appointment and associated prescriptions
+  const noteSources = [
+    appt.labNotes,
+    ...prescriptionList.map(p => p.labNotes)
+  ].filter(Boolean);
+
+  const fileSources = [
+    appt.labFileUrl,
+    ...prescriptionList.map(p => p.labFileUrl)
+  ].filter(Boolean);
+
   testNames.forEach(name => {
     if (!name) return;
     const matchedTest = labTests.find(t =>
@@ -127,6 +138,76 @@ async function calculateBackendInvoice(appointmentId) {
       name.toLowerCase().includes(t.name?.toLowerCase() || "___") ||
       name.toLowerCase().includes(t.description?.toLowerCase() || "___")
     );
+
+    const targetNames = [name, matchedTest?.name, matchedTest?.description]
+      .filter(Boolean)
+      .map(s => s.toLowerCase());
+
+    // Check if lab notes exist for this test
+    let hasNotes = false;
+    for (const noteStr of noteSources) {
+      if (!noteStr || typeof noteStr !== 'string') continue;
+      const trimmed = noteStr.trim();
+      if (!trimmed) continue;
+
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            const match = parsed.find(item => {
+              if (!item || !item.testName) return false;
+              const tName = item.testName.toLowerCase();
+              return targetNames.some(tn => tn === tName || tn.includes(tName) || tName.includes(tn));
+            });
+            if (match && match.notes && match.notes.trim().length > 0) {
+              hasNotes = true;
+              break;
+            }
+          }
+        } catch (e) {}
+      } else {
+        if (trimmed.length > 0) {
+          hasNotes = true;
+          break;
+        }
+      }
+    }
+
+    // Check if an uploaded lab file exists for this test
+    let hasFile = false;
+    for (const fileStr of fileSources) {
+      if (!fileStr || typeof fileStr !== 'string') continue;
+      const trimmed = fileStr.trim();
+      if (!trimmed) continue;
+
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            const match = parsed.find(item => {
+              if (!item || !item.testName) return false;
+              const tName = item.testName.toLowerCase();
+              return targetNames.some(tn => tn === tName || tn.includes(tName) || tName.includes(tn));
+            });
+            if (match && Array.isArray(match.urls) && match.urls.length > 0) {
+              hasFile = true;
+              break;
+            }
+          }
+        } catch (e) {}
+      } else {
+        if (trimmed.length > 0) {
+          hasFile = true;
+          break;
+        }
+      }
+    }
+
+    // Skip adding fee to the bill if the test has no lab notes and no file uploaded
+    if (!hasNotes && !hasFile) {
+      return;
+    }
+
     const baseCost = matchedTest ? (matchedTest.baseCost || matchedTest.cost) : 1000;
     const testCost = Math.round(baseCost);
     total += testCost;

@@ -153,7 +153,7 @@ To deploy your own instance:
 ## 🤝 Contributors
 
 - [Jamal Shah](https://github.com/Jama1Shah) — Full-stack development, architecture, and implementation
-- Rehanullah — Project team member
+- Rehanullah — Project team member,Full-stack development, architecture, and implementation.
 
 *(Contribution breakdown pending confirmation with course instructor)*
 
