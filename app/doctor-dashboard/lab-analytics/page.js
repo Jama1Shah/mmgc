@@ -304,7 +304,28 @@ const LabAnalyticsContent = () => {
     try { attachmentUrlsArray = JSON.parse(record.labFileUrl); } catch (e) { }
   }
 
-  const sortedTestsToShow = [...availableTests].sort((a, b) => a.localeCompare(b));
+  // --- Collect all existing / already ordered lab test names to filter them out of the order list ---
+  const existingTestNamesSet = new Set();
+
+  if (testNames && testNames !== "Standard Diagnostic Panels") {
+    testNames.split(',').forEach(t => existingTestNamesSet.add(t.trim().toLowerCase()));
+  }
+
+  if (record.labPrescription && record.labPrescription !== "No active lab orders listed.") {
+    record.labPrescription.split(',').forEach(t => existingTestNamesSet.add(t.trim().toLowerCase()));
+  }
+
+  textLogsArray.forEach(t => {
+    if (t.testName) existingTestNamesSet.add(t.testName.trim().toLowerCase());
+  });
+
+  attachmentUrlsArray.forEach(f => {
+    if (f.testName) existingTestNamesSet.add(f.testName.trim().toLowerCase());
+  });
+
+  const sortedTestsToShow = [...availableTests]
+    .filter(test => !existingTestNamesSet.has(test.trim().toLowerCase()))
+    .sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
@@ -464,29 +485,35 @@ const LabAnalyticsContent = () => {
 
               {/* Scrollable list frame */}
               <div className="overflow-y-auto flex-1 flex flex-col border border-slate-100 rounded-xl bg-slate-50/50 max-h-56">
-                {sortedTestsToShow.map((test, index) => {
-                  const isChecked = selectedTests.includes(test);
-                  return (
-                    <React.Fragment key={test}>
-                      <div
-                        onClick={() => handleToggleTest(test)}
-                        className={`flex items-center p-3 cursor-pointer select-none transition-all ${isChecked
-                            ? 'bg-blue-50/70 text-[#357DF9] font-medium'
-                            : 'hover:bg-slate-100 text-slate-700'
-                          }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => { }}
-                          className="h-4 w-4 text-[#357DF9] border-slate-300 rounded pointer-events-none mr-3 focus:ring-0"
-                        />
-                        <span className="text-xs">{test}</span>
-                      </div>
-                      {index < sortedTestsToShow.length - 1 && <hr className="border-slate-100 m-0" />}
-                    </React.Fragment>
-                  );
-                })}
+                {sortedTestsToShow.length > 0 ? (
+                  sortedTestsToShow.map((test, index) => {
+                    const isChecked = selectedTests.includes(test);
+                    return (
+                      <React.Fragment key={test}>
+                        <div
+                          onClick={() => handleToggleTest(test)}
+                          className={`flex items-center p-3 cursor-pointer select-none transition-all ${isChecked
+                              ? 'bg-blue-50/70 text-[#357DF9] font-medium'
+                              : 'hover:bg-slate-100 text-slate-700'
+                            }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => { }}
+                            className="h-4 w-4 text-[#357DF9] border-slate-300 rounded pointer-events-none mr-3 focus:ring-0"
+                          />
+                          <span className="text-xs">{test}</span>
+                        </div>
+                        {index < sortedTestsToShow.length - 1 && <hr className="border-slate-100 m-0" />}
+                      </React.Fragment>
+                    );
+                  })
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    All available laboratory tests have already been ordered.
+                  </div>
+                )}
               </div>
             </div>
 
