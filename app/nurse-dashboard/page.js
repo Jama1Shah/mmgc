@@ -111,7 +111,7 @@ export default function MasterNurseDashboard() {
             vitalsChecked: isCheckedThisShift, // Overridden based on Shift verification step
             vitalsCheckedAt: rx.vitalsCheckedAt || null,
             medStatus: rx.medStatus || "Pending",
-            admissionDays: calculateAdmissionDays(rx.admissionDetails?.admittedAt || apt.admissionDetails?.admittedAt),
+            admissionDays: (rx.admissionDetails?.admissionDays ?? apt.admissionDays ?? apt.admissionDetails?.admissionDays ?? calculateAdmissionDays(rx.admissionDetails?.admittedAt || apt.admissionDetails?.admittedAt)),
 
             // Dynamic Ward Allocation Normalization Engine
             ward: rx.admissionRequired ? (rx.admissionDetails?.ward || rx.admissionDetails?.wardName || "General Bedward") : "Outpatient / Lab"
