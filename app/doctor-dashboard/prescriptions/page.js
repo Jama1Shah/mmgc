@@ -60,6 +60,60 @@ const Prescriptions = () => {
 
   const dropdownRef = useRef(null);
 
+  // --- Filter already done/requested lab tests for the selected appointment ---
+  const doneLabTestsSet = React.useMemo(() => {
+    if (!selectedAppointment) return new Set();
+    const doneSet = new Set();
+
+    if (selectedAppointment.labPrescription && selectedAppointment.labPrescription !== "No active lab orders listed.") {
+      selectedAppointment.labPrescription.split(',').forEach(t => {
+        if (t.trim()) doneSet.add(t.trim().toLowerCase());
+      });
+    }
+
+    if (selectedAppointment.labNotes) {
+      const notesStr = String(selectedAppointment.labNotes).trim();
+      if (notesStr.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(notesStr);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(item => {
+              if (item && item.testName) doneSet.add(item.testName.trim().toLowerCase());
+            });
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (selectedAppointment.labFileUrl) {
+      const fileStr = String(selectedAppointment.labFileUrl).trim();
+      if (fileStr.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(fileStr);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(item => {
+              if (item && item.testName) doneSet.add(item.testName.trim().toLowerCase());
+            });
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (selectedAppointment.reason) {
+      const labsMatch = selectedAppointment.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
+      if (labsMatch && labsMatch[1]) {
+        const extracted = labsMatch[1].trim().replace(/[.,\s]+$/, "");
+        if (extracted && extracted !== "Standard Diagnostic Panels") {
+          extracted.split(',').forEach(t => {
+            if (t.trim()) doneSet.add(t.trim().toLowerCase());
+          });
+        }
+      }
+    }
+
+    return doneSet;
+  }, [selectedAppointment]);
+
   // --- Custom Notification Helper ---
   const showAlert = (message) => {
     setCustomAlert({
@@ -161,7 +215,7 @@ const Prescriptions = () => {
             const targetApptId = params.get('appointmentId');
             
             if (targetApptId) {
-              const matchedApt = outstandingAppointments.find(appt => appt._id === targetApptId);
+              const matchedApt = consolidatedSchedule.find(appt => appt._id === targetApptId) || outstandingAppointments.find(appt => appt._id === targetApptId);
               if (matchedApt) {
                 setSelectedAppointment(matchedApt);
               } else if (params.get('patientName')) {
@@ -171,7 +225,8 @@ const Prescriptions = () => {
                   patientEmail: params.get('patientEmail') || '',
                   date: params.get('appointmentDate') || '',
                   time: params.get('appointmentTime') || '',
-                  reason: 'Transferred Appointment Consultation'
+                  reason: 'Transferred Appointment Consultation',
+                  labPrescription: params.get('labTestName') || ''
                 });
               }
             }
@@ -711,7 +766,9 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {labsCatalog
+                              .filter(lab => !doneLabTestsSet.has(lab.testName.trim().toLowerCase()))
+                              .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request
