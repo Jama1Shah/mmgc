@@ -70,105 +70,6 @@ const Prescriptions = () => {
     });
   };
 
-  // --- Helper: Get completed/done lab tests for the currently selected patient/appointment ---
-  const getDoneLabTestsForSelectedAppointment = () => {
-    if (!selectedAppointment) return [];
-
-    const doneTests = new Set();
-
-    const processItem = (testName) => {
-      if (!testName) return;
-      const clean = String(testName).trim().toLowerCase();
-      if (clean) doneTests.add(clean);
-    };
-
-    const extractFromValue = (val) => {
-      if (!val) return;
-      if (typeof val === 'string') {
-        const str = val.trim();
-        if (str.startsWith('[')) {
-          try {
-            const parsed = JSON.parse(str);
-            if (Array.isArray(parsed)) {
-              parsed.forEach(item => {
-                if (typeof item === 'string') processItem(item);
-                else if (item && typeof item === 'object') {
-                  if (item.testName) processItem(item.testName);
-                  if (item.name) processItem(item.name);
-                  if (item.test) processItem(item.test);
-                }
-              });
-            }
-          } catch (e) {}
-        } else {
-          str.split(/[,;\n]+/).forEach(part => processItem(part));
-        }
-      } else if (Array.isArray(val)) {
-        val.forEach(item => {
-          if (typeof item === 'string') processItem(item);
-          else if (item && typeof item === 'object') {
-            if (item.testName) processItem(item.testName);
-            if (item.name) processItem(item.name);
-          }
-        });
-      }
-    };
-
-    if (selectedAppointment.completedLabs) {
-      extractFromValue(selectedAppointment.completedLabs);
-    }
-
-    if (selectedAppointment.labStatus === 'Completed' || selectedAppointment.labFileUrl) {
-      extractFromValue(selectedAppointment.labPrescription);
-      extractFromValue(selectedAppointment.labNotes);
-      extractFromValue(selectedAppointment.labFileUrl);
-    } else if (selectedAppointment.labNotes) {
-      try {
-        const parsed = JSON.parse(selectedAppointment.labNotes);
-        if (Array.isArray(parsed)) {
-          parsed.forEach(item => {
-            if (item && (item.status === 'Completed' || item.url || item.urls) && item.testName) {
-              processItem(item.testName);
-            }
-          });
-        }
-      } catch(e) {}
-    }
-
-    recentPrescriptions.forEach(p => {
-      const isMatch = (p.appointmentId?._id && p.appointmentId._id === selectedAppointment._id) ||
-                      (p.appointmentId && p.appointmentId === selectedAppointment._id) ||
-                      (p.patientEmail && selectedAppointment.patientEmail && p.patientEmail === selectedAppointment.patientEmail) ||
-                      (p.patientName && selectedAppointment.patientName && p.patientName === selectedAppointment.patientName);
-
-      if (isMatch) {
-        const targetLabStatus = p.labStatus || p.appointmentId?.labStatus;
-        const targetLabFileUrl = p.labFileUrl || p.appointmentId?.labFileUrl;
-        const targetLabNotes = p.labNotes || p.appointmentId?.labNotes;
-        const targetLabPrescription = p.labPrescription || p.appointmentId?.labPrescription;
-
-        if (targetLabStatus === 'Completed' || targetLabFileUrl) {
-          extractFromValue(targetLabPrescription);
-          extractFromValue(targetLabNotes);
-          extractFromValue(targetLabFileUrl);
-        } else if (targetLabNotes) {
-          try {
-            const parsed = JSON.parse(targetLabNotes);
-            if (Array.isArray(parsed)) {
-              parsed.forEach(item => {
-                if (item && (item.status === 'Completed' || item.url || item.urls) && item.testName) {
-                  processItem(item.testName);
-                }
-              });
-            }
-          } catch(e) {}
-        }
-      }
-    });
-
-    return Array.from(doneTests);
-  };
-
   // --- Close Custom Dropdown Overlay on Outside Mousedown ---
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -430,11 +331,6 @@ const Prescriptions = () => {
     if (!chosenLabTest) return;
     if (assignedLabs.includes(chosenLabTest)) {
       showAlert("This test entry row is already staged.");
-      return;
-    }
-    const doneTests = getDoneLabTestsForSelectedAppointment();
-    if (doneTests.includes(chosenLabTest.trim().toLowerCase())) {
-      showAlert("This diagnostic lab test is already completed for this patient.");
       return;
     }
     setAssignedLabs(prev => [...prev, chosenLabTest]);
@@ -815,12 +711,7 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {labsCatalog
-                              .filter(lab => {
-                                const doneTests = getDoneLabTestsForSelectedAppointment();
-                                return !doneTests.includes(lab.testName.trim().toLowerCase());
-                              })
-                              .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request
