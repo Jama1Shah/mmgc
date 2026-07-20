@@ -652,7 +652,21 @@ export default function DoctorAdmittedDashboard() {
                     <div className="flex gap-2">
                       <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                         <option value="">Select Lab Diagnosis Test Profile...</option>
-                        {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                        {labsCatalog
+                          .filter(lab => {
+                            if (!selectedPatient) return true;
+                            const allLabs = selectedPatient.labPrescription 
+                              ? selectedPatient.labPrescription.split(',').map(s => s.trim()).filter(Boolean) 
+                              : [];
+                            const todayStr = new Date().toLocaleDateString();
+                            const isAlreadyAssignedToday = allLabs.some(assignedLab => {
+                              const lp = assignedLab.trim();
+                              return lp === `${lab.testName} (${todayStr})` || (lp === lab.testName && new Date(selectedPatient.updatedAt).toLocaleDateString() === todayStr);
+                            });
+                            return !isAlreadyAssignedToday;
+                          })
+                          .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)
+                        }
                       </select>
                       <button onClick={handleAssignLab} className="px-4 bg-purple-600 text-white font-bold text-xs rounded-xl hover:bg-purple-700">Request</button>
                     </div>
