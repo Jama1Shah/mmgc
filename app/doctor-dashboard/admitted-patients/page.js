@@ -98,6 +98,24 @@ export default function DoctorAdmittedDashboard() {
     return Math.max(0, Math.floor((cd - ad) / (1000 * 60 * 60 * 24)));
   };
 
+  // Returns true if `testName` has already been requested for this specific patient "today".
+  // Mirrors the exact "<test> (<date>)" entry format written into labPrescription by
+  // handleAssignLab below (plus its legacy fallback for older undated entries), so a test
+  // hidden here is exactly the test handleAssignLab would otherwise reject as a duplicate.
+  // Because todayStr is recomputed on every render, once the calendar day rolls over this
+  // stops matching and the test naturally reappears in the dropdown for that same patient.
+  const isLabTestAlreadyRequestedToday = (testName, patient) => {
+    if (!patient) return false;
+    const todayStr = new Date().toLocaleDateString();
+    const allLabs = patient.labPrescription
+      ? patient.labPrescription.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    return allLabs.some(lab => {
+      const lp = lab.trim();
+      return lp === `${testName} (${todayStr})` || (lp === testName && new Date(patient.updatedAt).toLocaleDateString() === todayStr);
+    });
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -499,6 +517,14 @@ export default function DoctorAdmittedDashboard() {
     p.patientName && p.patientName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Lab Panel Sample Requester options for the currently selected patient, with tests already
+  // requested today for that patient filtered out. Recomputes on every render, so switching to a
+  // different patient (unaffected by this patient's requests) or crossing into a new day (todayStr
+  // changes inside isLabTestAlreadyRequestedToday) both correctly bring tests back into the list.
+  const availableLabsCatalog = selectedPatient
+    ? labsCatalog.filter(lab => !isLabTestAlreadyRequestedToday(lab.testName, selectedPatient))
+    : labsCatalog;
+
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
       
@@ -652,7 +678,7 @@ export default function DoctorAdmittedDashboard() {
                     <div className="flex gap-2">
                       <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                         <option value="">Select Lab Diagnosis Test Profile...</option>
-                        {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                        {availableLabsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                       </select>
                       <button onClick={handleAssignLab} className="px-4 bg-purple-600 text-white font-bold text-xs rounded-xl hover:bg-purple-700">Request</button>
                     </div>
