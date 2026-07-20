@@ -337,44 +337,6 @@ const Prescriptions = () => {
     setChosenLabTest("");
   };
 
-  // --- Derive lab test names already COMPLETED for the currently selected patient,
-  // so they no longer appear in the Lab Panel Sample Requester dropdown when
-  // admitting that patient / assigning a new test. ---
-  const alreadyCompletedLabTestNames = React.useMemo(() => {
-    const names = new Set();
-    if (!selectedAppointment) return names;
-
-    const patientEmail = selectedAppointment.patientEmail;
-
-    recentPrescriptions.forEach(p => {
-      const rxPatientEmail = p.patientEmail || p.appointmentId?.patientEmail;
-      const rxAppointmentId = p.appointmentId?._id || p.appointmentId;
-
-      const matchesPatient =
-        (patientEmail && rxPatientEmail === patientEmail) ||
-        (rxAppointmentId && rxAppointmentId === selectedAppointment._id);
-
-      if (!matchesPatient) return;
-
-      const targetLabStatus = p.labStatus || p.appointmentId?.labStatus;
-      const targetLabPrescription = p.labPrescription || p.appointmentId?.labPrescription;
-
-      if (targetLabStatus === 'Completed' && targetLabPrescription) {
-        String(targetLabPrescription).split(',').forEach(rawEntry => {
-          const trimmedEntry = rawEntry.trim();
-          if (!trimmedEntry) return;
-          // The admitted-patient workflow stores entries as "TestName (date)" —
-          // strip that trailing annotation so it still matches the plain catalog name.
-          const dateSuffixMatch = trimmedEntry.match(/^(.*)\s\([^)]+\)$/);
-          const cleanName = dateSuffixMatch ? dateSuffixMatch[1].trim() : trimmedEntry;
-          if (cleanName) names.add(cleanName.toLowerCase());
-        });
-      }
-    });
-
-    return names;
-  }, [selectedAppointment, recentPrescriptions]);
-
   // --- Create/Issue Prescription Engine ---
   const handleIssuePrescription = async () => {
     if (!selectedAppointment) {
@@ -749,9 +711,7 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {labsCatalog
-                              .filter(lab => !alreadyCompletedLabTestNames.has((lab.testName || "").trim().toLowerCase()))
-                              .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request

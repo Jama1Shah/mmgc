@@ -405,34 +405,6 @@ export default function DoctorAdmittedDashboard() {
     }
   };
 
-  // --- Derive lab test names already requested/done TODAY for the currently selected
-  // admitted patient, so they no longer appear in the Lab Panel Sample Requester dropdown.
-  // Mirrors the same-day duplicate check inside handleAssignLab, so a test reappears in
-  // the dropdown automatically once the admission day changes (i.e. it's no longer "today"). ---
-  const alreadyRequestedTodayLabTests = React.useMemo(() => {
-    const names = new Set();
-    if (!selectedPatient || !selectedPatient.labPrescription) return names;
-
-    const todayStr = new Date().toLocaleDateString();
-    const allLabs = selectedPatient.labPrescription.split(',').map(s => s.trim()).filter(Boolean);
-
-    allLabs.forEach(entry => {
-      const dateMatch = entry.match(/^(.*)\s\(([^)]+)\)$/);
-      if (dateMatch) {
-        const [, testName, entryDate] = dateMatch;
-        if (entryDate === todayStr) {
-          names.add(testName.trim().toLowerCase());
-        }
-      } else if (selectedPatient.updatedAt && new Date(selectedPatient.updatedAt).toLocaleDateString() === todayStr) {
-        // Legacy entries without a "(date)" suffix - fall back to the record's last update date,
-        // same fallback handleAssignLab already uses for its duplicate check.
-        names.add(entry.trim().toLowerCase());
-      }
-    });
-
-    return names;
-  }, [selectedPatient]);
-
   const handleDischargePatient = () => {
     // Open the take-home prescription staging modal first, instead of jumping straight to the confirmation dialog
     setDischargeRxModal({ isOpen: true, notes: '', medicine: '', timing: '', list: [] });
@@ -680,9 +652,7 @@ export default function DoctorAdmittedDashboard() {
                     <div className="flex gap-2">
                       <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                         <option value="">Select Lab Diagnosis Test Profile...</option>
-                        {labsCatalog
-                          .filter(lab => !alreadyRequestedTodayLabTests.has((lab.testName || "").trim().toLowerCase()))
-                          .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                        {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                       </select>
                       <button onClick={handleAssignLab} className="px-4 bg-purple-600 text-white font-bold text-xs rounded-xl hover:bg-purple-700">Request</button>
                     </div>
