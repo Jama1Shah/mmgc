@@ -226,29 +226,6 @@ const Prescriptions = () => {
     return "Anonymous Patient";
   };
 
-  // Returns true if `testName` has already been requested/completed for the specific patient tied
-  // to `appointment` in a previously issued prescription. Matched primarily by appointment ID
-  // (covers this exact scheduled slot); falls back to matching the patient's email when the
-  // appointment object was reconstructed from URL transfer params and carries no reliable _id link.
-  // Mirrors the same "hide already-done tests" behavior used on the Admitted Patient dashboard's
-  // Lab Panel Sample Requester dropdown, scoped here to the currently selected appointment/patient.
-  const isLabTestAlreadyDoneForPatient = (testName, appointment) => {
-    if (!appointment) return false;
-    const matchingRx = recentPrescriptions.filter(rx => {
-      const rxApptId = rx.appointmentId?._id || rx.appointmentId || rx.id;
-      if (appointment._id && rxApptId && String(rxApptId) === String(appointment._id)) return true;
-      if (appointment.patientEmail && rx.patientEmail && rx.patientEmail === appointment.patientEmail) return true;
-      return false;
-    });
-
-    return matchingRx.some(rx => {
-      const allLabs = rx.labPrescription
-        ? rx.labPrescription.split(',').map(s => s.trim()).filter(Boolean)
-        : [];
-      return allLabs.some(lab => lab.toLowerCase() === testName.trim().toLowerCase());
-    });
-  };
-
   // --- Filter Dropdown Array using Search Inputs and Status Filter ---
   const filteredOptions = eligibleAppointments.filter(appt => {
     const isAcceptedStatus = appt.status === "Accepted for Checkup";
@@ -734,9 +711,7 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {labsCatalog
-                              .filter(lab => !isLabTestAlreadyDoneForPatient(lab.testName, selectedAppointment))
-                              .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request
