@@ -122,7 +122,8 @@ export default function MasterNurseDashboard() {
       }
     } catch (err) {
       console.error("Failed synchronization pipeline operations on nurse station:", err);
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
   };

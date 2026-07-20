@@ -229,8 +229,10 @@ export async function GET(req) {
         currentDate.setHours(0, 0, 0, 0);
         const daysPassed = Math.max(0, Math.floor((currentDate - admittedAt) / (1000 * 60 * 60 * 24)));
         
-        if (daysPassed > (apptObj.admissionDays || 0) || daysPassed > (apptObj.admissionDetails.admissionDays || 0)) {
+        const currentDbDays = apptObj.admissionDays ?? apptObj.admissionDetails?.admissionDays ?? 0;
+        if (daysPassed > currentDbDays) {
            apptObj.admissionDays = daysPassed;
+           if (!apptObj.admissionDetails) apptObj.admissionDetails = {};
            apptObj.admissionDetails.admissionDays = daysPassed;
            
            // Background database sync

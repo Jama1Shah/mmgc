@@ -165,7 +165,12 @@ export default function DoctorAdmittedDashboard() {
           });
 
           const admissionDetails = linkedRx?.admissionDetails || appt.admissionDetails || { wardName: 'General Bedward' };
-          const admissionDays = calculateAdmissionDays(admissionDetails.admittedAt);
+          
+          // ✨ FIX: Prioritize database value over purely dynamic date difference calculation
+          const dbAdmissionDays = linkedRx?.admissionDetails?.admissionDays ?? appt?.admissionDetails?.admissionDays ?? appt?.admissionDays;
+          const admissionDays = (dbAdmissionDays !== undefined && dbAdmissionDays !== null)
+            ? dbAdmissionDays
+            : calculateAdmissionDays(admissionDetails.admittedAt);
 
           return {
             _id: linkedRx ? (linkedRx._id || linkedRx.id) : appt._id, 
@@ -979,7 +984,6 @@ export default function DoctorAdmittedDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
