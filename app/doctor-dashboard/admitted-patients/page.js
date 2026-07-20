@@ -533,7 +533,7 @@ export default function DoctorAdmittedDashboard() {
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
       
-                              <title>Admitted Patients - MMGC</title>
+      <title>Admitted Patients - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       <main className="flex-1 flex flex-col overflow-hidden">
         
@@ -642,7 +642,7 @@ export default function DoctorAdmittedDashboard() {
                     <button onClick={handlePrescribeMedicine} className="w-full py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-lg hover:bg-emerald-100 transition-colors">Include Medicine Item in Chart List</button>
                     
                     {/* Toggleable Medicines Deployment Interface Layout Block */}
-                    <div className="w-full flex-1 min-h-[150px] bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-mono text-slate-700 overflow-y-auto space-y-1">
+                    <div className="w-full flex-1 min-h-[150px] bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-mono text-slate-700 overflow-y-auto space-y-2">
                       {selectedPatient.medicationDetails ? (
                         selectedPatient.medicationDetails.split('\n').map((line, idx) => {
                           if (!line.trim()) return null;
@@ -651,15 +651,15 @@ export default function DoctorAdmittedDashboard() {
                           const isCancelled = lowerLine.includes('cancelled');
 
                           return (
-                            <div key={idx} className="flex items-center justify-between p-1 rounded hover:bg-slate-100/80 transition-colors">
-                              <span className={`truncate flex-1 ${isCancelled ? 'line-through text-slate-400 font-medium' : 'text-slate-700 font-bold'}`}>
+                            <div key={idx} className="flex items-start justify-between gap-2.5 p-2 rounded-xl bg-white border border-slate-100 shadow-2xs hover:bg-slate-100/80 transition-colors">
+                              <span className={`flex-1 min-w-0 break-words whitespace-pre-wrap text-xs leading-snug ${isCancelled ? 'line-through text-slate-400 font-medium' : 'text-slate-700 font-bold'}`}>
                                 {line}
                               </span>
                               {isMed && (
                                 <button
                                   type="button"
                                   onClick={() => handleToggleCancelMedicine(idx)}
-                                  className={`ml-2 px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider transition-colors ${
+                                  className={`shrink-0 px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider transition-colors ${
                                     isCancelled 
                                       ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100' 
                                       : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
@@ -931,8 +931,8 @@ export default function DoctorAdmittedDashboard() {
               <div className="min-h-[100px] max-h-[220px] overflow-y-auto bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1.5">
                 {dischargeRxModal.list.length > 0 ? (
                   dischargeRxModal.list.map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 font-mono">
-                      <span className="truncate">{entry}</span>
+                    <div key={idx} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 font-mono gap-2">
+                      <span className="flex-1 min-w-0 break-words whitespace-pre-wrap">{entry}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveDischargeMedicine(idx)}
