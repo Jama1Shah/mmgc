@@ -234,6 +234,27 @@ const Prescriptions = () => {
     return isAcceptedStatus && (matchName || matchReason);
   });
 
+  // --- Derive Lab Tests Already Completed For The Currently Selected Patient ---
+  // Scans this patient's previously issued prescriptions and collects any lab panel
+  // names tied to a completed lab status, so the admission Lab Panel Sample Requester
+  // dropdown can exclude tests that have already been done for them.
+  const patientCompletedLabTests = new Set(
+    selectedAppointment
+      ? recentPrescriptions
+          .filter(p => {
+            const targetPatientEmail = p.patientEmail || p.appointmentId?.patientEmail;
+            const targetLabStatus = p.labStatus || p.appointmentId?.labStatus;
+            return targetPatientEmail && selectedAppointment.patientEmail &&
+              targetPatientEmail.toLowerCase() === selectedAppointment.patientEmail.toLowerCase() &&
+              targetLabStatus === 'Completed';
+          })
+          .flatMap(p => {
+            const targetLabPrescription = p.labPrescription || p.appointmentId?.labPrescription || '';
+            return targetLabPrescription.split(',').map(name => name.trim()).filter(Boolean);
+          })
+      : []
+  );
+
   // --- Dynamic Ward Submission Handler & Database Sync ---
   const handleAddCustomWard = async () => {
     if (!newWardName.trim() || !newWardSpecialty.trim()) {

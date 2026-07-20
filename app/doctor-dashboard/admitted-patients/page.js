@@ -499,27 +499,6 @@ export default function DoctorAdmittedDashboard() {
     p.patientName && p.patientName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Determine which lab tests already have results/documents on file for the
-  // currently selected patient (i.e. already done), so they can be excluded
-  // from the "Lab Panel Sample Requester" dropdown for that patient only.
-  const getCompletedLabTestNames = (patient) => {
-    if (!patient) return [];
-    let textLogsArray = [];
-    let attachmentUrlsArray = [];
-    try { if (patient.labNotes?.startsWith('[')) textLogsArray = JSON.parse(patient.labNotes); } catch (e) {}
-    try { if (patient.labFileUrl?.startsWith('[')) attachmentUrlsArray = JSON.parse(patient.labFileUrl); } catch (e) {}
-
-    return [
-      ...textLogsArray.map(t => t.testName?.trim()),
-      ...attachmentUrlsArray.map(f => f.testName?.trim())
-    ].filter(Boolean);
-  };
-
-  const completedTestNamesForSelectedPatient = getCompletedLabTestNames(selectedPatient);
-  const availableLabsCatalog = labsCatalog.filter(
-    lab => !completedTestNamesForSelectedPatient.includes(lab.testName)
-  );
-
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
       
@@ -673,7 +652,7 @@ export default function DoctorAdmittedDashboard() {
                     <div className="flex gap-2">
                       <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                         <option value="">Select Lab Diagnosis Test Profile...</option>
-                        {availableLabsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                        {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                       </select>
                       <button onClick={handleAssignLab} className="px-4 bg-purple-600 text-white font-bold text-xs rounded-xl hover:bg-purple-700">Request</button>
                     </div>
