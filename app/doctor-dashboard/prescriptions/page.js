@@ -60,55 +60,101 @@ const Prescriptions = () => {
 
   const dropdownRef = useRef(null);
 
+  // Helper to extract clean patient name
+  const getCleanPatientName = (apt) => {
+    if (!apt) return "Anonymous Patient";
+    if (apt.patientName && apt.patientName !== "Patient Profile" && apt.patientName.trim() !== "") {
+      return apt.patientName;
+    }
+    if (apt.patientEmail) {
+      const prefix = apt.patientEmail.split('@')[0];
+      return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+    }
+    return "Anonymous Patient";
+  };
+
   // --- Extract Already Done / Ordered Lab Tests for Selected Appointment ---
   const doneLabTests = useMemo(() => {
     if (!selectedAppointment) return [];
     const doneSet = new Set();
 
-    const matchingRx = recentPrescriptions.find(
-      p => String(p.appointmentId?._id || p.appointmentId) === String(selectedAppointment._id)
-    );
+    const processVal = (val) => {
+      if (!val) return;
 
-    const processStr = (str) => {
+      if (typeof val === 'object') {
+        if (Array.isArray(val)) {
+          val.forEach(item => processVal(item));
+        } else {
+          const name = val.testName || val.name || val.test || val.description || val.title;
+          if (name) processVal(name);
+        }
+        return;
+      }
+
+      const str = String(val).trim();
       if (!str) return;
-      const s = String(str).trim();
-      if (s.startsWith('[')) {
+
+      if (str.startsWith('[') || str.startsWith('{')) {
         try {
-          const arr = JSON.parse(s);
-          if (Array.isArray(arr)) {
-            arr.forEach(item => {
-              if (item && item.testName) {
-                doneSet.add(item.testName.trim().toLowerCase());
-              }
-            });
-          }
+          const parsed = JSON.parse(str);
+          processVal(parsed);
+          return;
         } catch (e) {}
-      } else if (s && s !== "No active lab orders listed." && s !== "Diagnostic Panels Ordered") {
-        s.split(',').forEach(t => {
-          if (t.trim()) doneSet.add(t.trim().toLowerCase());
+      }
+
+      if (
+        str !== "No active lab orders listed." &&
+        str !== "Diagnostic Panels Ordered" &&
+        str !== "None" &&
+        str !== "Pending"
+      ) {
+        str.split(/[,;\n]+/).forEach(t => {
+          const cleaned = t.trim().toLowerCase();
+          if (cleaned && cleaned.length > 0) {
+            doneSet.add(cleaned);
+          }
         });
       }
     };
 
     // Check appointment lab fields
-    processStr(selectedAppointment.labNotes);
-    processStr(selectedAppointment.labFileUrl);
-    processStr(selectedAppointment.labPrescription);
-    processStr(selectedAppointment.labReason);
+    processVal(selectedAppointment.labNotes);
+    processVal(selectedAppointment.labFileUrl);
+    processVal(selectedAppointment.labPrescription);
+    processVal(selectedAppointment.labReason);
+    processVal(selectedAppointment.labTests);
+    processVal(selectedAppointment.labs);
 
     if (selectedAppointment.reason) {
-      const labsMatch = selectedAppointment.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
+      const labsMatch = selectedAppointment.reason.match(/(?:Requested Labs|Labs|Lab Tests):\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
       if (labsMatch && labsMatch[1]) {
-        processStr(labsMatch[1]);
+        processVal(labsMatch[1]);
       }
     }
 
-    // Check prescription lab fields
-    if (matchingRx) {
-      processStr(matchingRx.labNotes);
-      processStr(matchingRx.labFileUrl);
-      processStr(matchingRx.labPrescription);
-    }
+    // Check matching prescriptions by appointment ID or patient identity
+    const currentApptId = String(selectedAppointment._id || '');
+    const currentPatientEmail = selectedAppointment.patientEmail?.toLowerCase();
+    const currentPatientName = getCleanPatientName(selectedAppointment).toLowerCase();
+
+    recentPrescriptions.forEach(rx => {
+      const rxApptId = String(rx.appointmentId?._id || rx.appointmentId || '');
+      const rxEmail = rx.patientEmail?.toLowerCase();
+      const rxName = rx.patientName?.toLowerCase();
+
+      const isMatch =
+        (currentApptId && rxApptId === currentApptId) ||
+        (currentPatientEmail && rxEmail && rxEmail === currentPatientEmail) ||
+        (currentPatientName && rxName && rxName === currentPatientName);
+
+      if (isMatch) {
+        processVal(rx.labPrescription);
+        processVal(rx.labNotes);
+        processVal(rx.labFileUrl);
+        processVal(rx.labTests);
+        processVal(rx.labs);
+      }
+    });
 
     return Array.from(doneSet);
   }, [selectedAppointment, recentPrescriptions]);
@@ -154,7 +200,7 @@ const Prescriptions = () => {
           if (medRes.ok) setMedicinesList(await medRes.json());
           if (labRes.ok) {
             const labData = await labRes.json();
-            setLabsCatalog(labData.map(t => ({ _id: t._id, testName: t.description })));
+            setLabsCatalog(labData.map(t => ({ _id: t._id, testName: t.description || t.name || t.testName || "" })));
           }
         } catch (inventoryErr) {
           console.error("Failed fetching database options stream:", inventoryErr);
@@ -266,18 +312,6 @@ const Prescriptions = () => {
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   }, [customAlert, showCustomWardModal, showCustomMedicineModal, showCustomLabModal, newWardName, newWardSpecialty, newMedicineName, newLabTestName]);
-
-  const getCleanPatientName = (apt) => {
-    if (!apt) return "Anonymous Patient";
-    if (apt.patientName && apt.patientName !== "Patient Profile" && apt.patientName.trim() !== "") {
-      return apt.patientName;
-    }
-    if (apt.patientEmail) {
-      const prefix = apt.patientEmail.split('@')[0];
-      return prefix.charAt(0).toUpperCase() + prefix.slice(1);
-    }
-    return "Anonymous Patient";
-  };
 
   // --- Filter Dropdown Array using Search Inputs and Status Filter ---
   const filteredOptions = eligibleAppointments.filter(appt => {
@@ -579,7 +613,7 @@ const Prescriptions = () => {
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
       
-                        <title>Prescriptions - MMGC</title>
+      <title>Prescriptions - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
@@ -767,12 +801,25 @@ const Prescriptions = () => {
                             {labsCatalog
                               .filter(lab => {
                                 if (!needsAdmission || !selectedAppointment) return true;
-                                const labNameLower = lab.testName.trim().toLowerCase();
-                                return !doneLabTests.some(doneName => 
-                                  doneName === labNameLower || 
-                                  labNameLower.includes(doneName) || 
-                                  doneName.includes(labNameLower)
-                                );
+                                const labNameLower = (lab.testName || "").trim().toLowerCase();
+                                if (!labNameLower) return false;
+
+                                // Exclude if already added to active form state
+                                if (assignedLabs.some(assigned => assigned.trim().toLowerCase() === labNameLower)) {
+                                  return false;
+                                }
+
+                                // Exclude if test was already done/ordered previously
+                                return !doneLabTests.some(doneName => {
+                                  if (!doneName) return false;
+                                  const cleanDone = doneName.trim().toLowerCase();
+                                  if (!cleanDone) return false;
+                                  return (
+                                    cleanDone === labNameLower || 
+                                    labNameLower.includes(cleanDone) || 
+                                    cleanDone.includes(labNameLower)
+                                  );
+                                });
                               })
                               .map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
