@@ -326,7 +326,8 @@ const LabStaffDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans flex">
-      <title>Dashboard - MMGC</title>
+      
+                                            <title>Dashboard - MMGC</title>
       <LabStaffSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
@@ -596,19 +597,9 @@ const TableRow = ({ order, styles, viewMode, onStart, onDelete, onClearHistory, 
 
   // LOGIC: Filter to show only the current (not yet completed) tests
   const allTests = parseTestsList(order.test);
-  const completedTestNames = textLogsArray.map(log => log.testName?.trim()).filter(Boolean);
-  
-  const occurrenceTracker = {};
-  const pendingTests = allTests.filter(test => {
-    const trimmed = test.trim();
-    occurrenceTracker[trimmed] = (occurrenceTracker[trimmed] || 0) + 1;
-    const totalCompleted = completedTestNames.filter(name => name === trimmed).length;
-    return occurrenceTracker[trimmed] > totalCompleted;
-  });
-
-  const displayTestName = (viewMode === 'active' && order.labStatus !== 'Completed') 
-    ? pendingTests.join(', ') 
-    : order.test;
+  const completedTestNames = textLogsArray.map(log => log.testName?.trim());
+  const pendingTests = allTests.filter(test => !completedTestNames.includes(test.trim()));
+  const displayTestName = pendingTests.length > 0 ? pendingTests.join(', ') : order.test;
 
   return (
     <tr className={`hover:bg-gray-50 transition-colors ${order.labStatus === "In Progress" && viewMode === 'active' ? 'bg-blue-50/40 font-medium border-l-4 border-l-[#357DF9]' : ''}`}>

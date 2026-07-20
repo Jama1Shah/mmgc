@@ -234,6 +234,87 @@ const Prescriptions = () => {
     return isAcceptedStatus && (matchName || matchReason);
   });
 
+  // --- Filter Out Existing & Already Done Lab Tests for Selected Patient ---
+  const getExistingAndDoneLabTests = () => {
+    const existingSet = new Set();
+
+    // 1. Add tests currently assigned/staged in form
+    assignedLabs.forEach(lab => {
+      if (lab) existingSet.add(lab.trim().toLowerCase());
+    });
+
+    if (!selectedAppointment) return existingSet;
+
+    // Helper parser for raw test strings or JSON arrays
+    const extractTests = (sourceStr) => {
+      if (!sourceStr || typeof sourceStr !== 'string') return;
+      const trimmed = sourceStr.trim();
+      if (!trimmed || trimmed === 'No active lab orders listed.' || trimmed === 'Diagnostic Panels Ordered') return;
+
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(item => {
+              if (item && item.testName) {
+                existingSet.add(item.testName.trim().toLowerCase());
+              }
+            });
+          }
+        } catch (e) {}
+      } else {
+        trimmed.split(',').forEach(t => {
+          const cleaned = t.trim().toLowerCase();
+          if (cleaned) existingSet.add(cleaned);
+        });
+      }
+    };
+
+    // 2. Extract from selected appointment parameters
+    extractTests(selectedAppointment.labPrescription);
+    extractTests(selectedAppointment.labNotes);
+    extractTests(selectedAppointment.labFileUrl);
+
+    if (selectedAppointment.reason) {
+      const labsMatch = selectedAppointment.reason.match(/Requested Labs:\s*([\s\S]*?)(?=(?:\.?\s*Urgency:)|$)/i);
+      if (labsMatch && labsMatch[1]) {
+        extractTests(labsMatch[1]);
+      }
+    }
+
+    // 3. Extract from matching recent prescriptions
+    recentPrescriptions.forEach(rx => {
+      const apptId = rx.appointmentId?._id || rx.appointmentId;
+      const matchesAppt = apptId && selectedAppointment._id && apptId.toString() === selectedAppointment._id.toString();
+      const matchesEmail = rx.patientEmail && selectedAppointment.patientEmail && rx.patientEmail.toLowerCase() === selectedAppointment.patientEmail.toLowerCase();
+
+      if (matchesAppt || matchesEmail) {
+        extractTests(rx.labPrescription);
+        extractTests(rx.labNotes);
+        extractTests(rx.labFileUrl);
+      }
+    });
+
+    return existingSet;
+  };
+
+  const existingAndDoneLabs = getExistingAndDoneLabTests();
+
+  const availableLabTests = labsCatalog.filter(lab => {
+    if (!lab || !lab.testName) return false;
+    const normName = lab.testName.trim().toLowerCase();
+
+    if (existingAndDoneLabs.has(normName)) return false;
+
+    for (let doneTest of existingAndDoneLabs) {
+      if (doneTest && (normName.includes(doneTest) || doneTest.includes(normName))) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   // --- Dynamic Ward Submission Handler & Database Sync ---
   const handleAddCustomWard = async () => {
     if (!newWardName.trim() || !newWardSpecialty.trim()) {
@@ -525,8 +606,7 @@ const Prescriptions = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      
-                        <title>Prescriptions - MMGC</title>
+      <title>Prescriptions - MMGC</title>
       <DoctorSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
@@ -569,7 +649,7 @@ const Prescriptions = () => {
                           Slot Time: {selectedAppointment.date} ∙ {selectedAppointment.time}
                         </p>
                       </div>
-                      <button onClick={() => { setSelectedAppointment(null); setSearchQuery(""); }} className="p-1.5 hover:bg-blue-100/70 text-blue-600 rounded-lg transition-colors">
+                      <button onClick={() => { setSelectedAppointment(null); setSearchQuery(""); setAssignedLabs([]); setAssignedMedicines([]); }} className="p-1.5 hover:bg-blue-100/70 text-blue-600 rounded-lg transition-colors">
                         <X size={16} />
                       </button>
                     </div>
@@ -589,7 +669,7 @@ const Prescriptions = () => {
                             filteredOptions.map((appt) => (
                               <div
                                 key={appt._id}
-                                onClick={() => { setSelectedAppointment(appt); setShowDropdown(false); }}
+                                onClick={() => { setSelectedAppointment(appt); setAssignedLabs([]); setAssignedMedicines([]); setShowDropdown(false); }}
                                 className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 text-left transition-colors"
                               >
                                 <p className="font-bold text-slate-800 text-sm">{getCleanPatientName(appt)}</p>
@@ -711,7 +791,7 @@ const Prescriptions = () => {
                         <div className="flex gap-2">
                           <select value={chosenLabTest} onChange={(e) => setChosenLabTest(e.target.value)} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Lab Diagnosis Test Profile...</option>
-                            {labsCatalog.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
+                            {availableLabTests.map(lab => <option key={lab._id} value={lab.testName}>{lab.testName}</option>)}
                           </select>
                           <button type="button" onClick={addLabRow} className="px-4 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors">
                             Request
@@ -833,44 +913,53 @@ const Prescriptions = () => {
                                     <div className="space-y-1.5">
                                       {textLogsArray.map((t, idx) => (
                                         <div key={idx} className="text-xs text-slate-600">
-                                          <span className="font-bold text-slate-800">{t.testName || "Notes"}:</span> "{t.notes || 'No notes configuration provided'}"
+                                          <span className="font-bold text-slate-800">{t.testName || t.test}:</span> {t.notes}
                                         </div>
                                       ))}
                                     </div>
-                                  ) : targetLabNotes && (
-                                    <div className="text-xs text-slate-600">
-                                      <span className="font-bold text-slate-800">Lab Notes:</span> <span className="italic">"{targetLabNotes}"</span>
-                                    </div>
+                                  ) : (
+                                    targetLabNotes && !targetLabNotes.startsWith('[') && (
+                                      <div className="text-xs text-slate-600">
+                                        <span className="font-bold text-slate-800">Lab Notes:</span> {targetLabNotes}
+                                      </div>
+                                    )
                                   )}
 
-                                  {/* Lab File Attachment Matrix Map */}
+                                  {/* Attachment URLs Array Matrix */}
                                   {attachmentUrlsArray.length > 0 ? (
-                                    <div className="pt-2 border-t border-slate-100 flex flex-col space-y-1">
-                                      {attachmentUrlsArray.map((fileObj, idx) => (
-                                        <div key={idx} className="flex items-center justify-between text-[11px] bg-slate-50 border rounded-lg p-1.5 px-2.5">
-                                          <span className="font-semibold text-slate-500 truncate max-w-[65%]">{fileObj.testName || "Result File"}</span>
-                                          <div className="flex gap-1.5">
-                                            {fileObj.urls && Array.isArray(fileObj.urls) ? (
-                                              fileObj.urls.map((url, uIdx) => (
-                                                <a key={uIdx} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5 font-bold">
-                                                  Doc {uIdx + 1} <ExternalLink size={10} />
-                                                </a>
-                                              ))
-                                            ) : (
-                                              <a href={fileObj.url || fileObj} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5 font-bold">
-                                                View File <ExternalLink size={10} />
+                                    <div className="space-y-1 pt-1 border-t border-slate-100">
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attached Reports</span>
+                                      <div className="flex flex-wrap gap-2">
+                                        {attachmentUrlsArray.map((f, idx) => (
+                                          <div key={idx} className="space-y-1">
+                                            {f.urls && f.urls.map((url, uIdx) => (
+                                              <a
+                                                key={uIdx}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-semibold hover:underline bg-blue-50 px-2 py-1 rounded-md"
+                                              >
+                                                <ExternalLink size={12} /> {f.testName || 'Report'} #{uIdx + 1}
                                               </a>
-                                            )}
+                                            ))}
                                           </div>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
                                     </div>
-                                  ) : targetLabFileUrl && (
-                                    <div className="pt-2 border-t border-slate-100">
-                                      <a href={targetLabFileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 font-bold">
-                                        View Diagnostic Attachment Report <ExternalLink size={12} />
-                                      </a>
-                                    </div>
+                                  ) : (
+                                    targetLabFileUrl && !targetLabFileUrl.startsWith('[') && (
+                                      <div className="pt-1 border-t border-slate-100">
+                                        <a
+                                          href={targetLabFileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-semibold hover:underline bg-blue-50 px-2 py-1 rounded-md"
+                                        >
+                                          <ExternalLink size={12} /> View Diagnostic Report
+                                        </a>
+                                      </div>
+                                    )
                                   )}
                                 </div>
                               )}
@@ -881,138 +970,166 @@ const Prescriptions = () => {
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-slate-200 px-4">
-                    <FileText size={32} className="mx-auto text-slate-200 mb-2" />
-                    <p className="text-xs text-slate-400 italic">No historical action tracking records found.</p>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center">
+                    <p className="text-xs text-slate-400 font-medium">No recent prescription records found.</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
-      </main>
 
-      {/* --- MODAL 1: ADD CUSTOM HOSPITAL WARD --- */}
-      {showCustomWardModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl border border-slate-100 text-left">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Create Custom Hospital Ward</h3>
-              <button onClick={() => { setShowCustomWardModal(false); setNewWardName(""); setNewWardSpecialty(""); }} className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 ml-1">Ward Name Label</label>
-                <input type="text" value={newWardName} onChange={(e) => setNewWardName(e.target.value)} placeholder="e.g., Ward A, Emergency ICU" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+        {/* MODALS SECTION */}
+        {/* Custom Ward Modal */}
+        {showCustomWardModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-extrabold text-slate-800 text-base">Register Custom Ward</h3>
+                <button onClick={() => setShowCustomWardModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                  <X size={18} />
+                </button>
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 ml-1">Clinical Specialty Sector</label>
-                <input type="text" value={newWardSpecialty} onChange={(e) => setNewWardSpecialty(e.target.value)} placeholder="e.g., General Medicine, Pediatrics" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => { setShowCustomWardModal(false); setNewWardName(""); setNewWardSpecialty(""); }} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200">Cancel</button>
-              <button type="button" onClick={handleAddCustomWard} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl text-xs hover:bg-blue-700">Save Ward to DB</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 2: DIRECT ADD CUSTOM MEDICINE FORMULA --- */}
-      {showCustomMedicineModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-left">
-            <h3 className="text-md font-extrabold text-slate-900 mb-4">Register New Medicine Formula</h3>
-            <div className="mb-4">
-              <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Compound Description Title</label>
-              <input type="text" value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g., Cap Amoxicillin 500mg" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setShowCustomMedicineModal(false); setNewMedicineName(""); }} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold rounded-xl">Cancel</button>
-              <button type="button" onClick={handleAddCustomMedicine} className="flex-1 py-2.5 bg-emerald-600 text-white font-black text-xs rounded-xl hover:bg-emerald-700">Commit to DB</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 3: DIRECT ADD CUSTOM DIAGNOSTIC TEST PROFILE --- */}
-      {showCustomLabModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-left">
-            <h3 className="text-md font-extrabold text-slate-900 mb-4">Register Diagnostic Panel Test</h3>
-            <div className="mb-4">
-              <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Lab Test Label Title</label>
-              <input type="text" value={newLabTestName} onChange={(e) => setNewLabTestName(e.target.value)} placeholder="e.g., Serum Electrolytes Panel" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setShowCustomLabModal(false); setNewLabTestName(""); }} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold rounded-xl">Cancel</button>
-              <button type="button" onClick={handleAddCustomLabTest} className="flex-1 py-2.5 bg-purple-600 text-white font-black text-xs rounded-xl hover:bg-purple-700">Save System Catalog</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 4: SYSTEM CUSTOM ALERT / CONFIRMATION MATRIX --- */}
-      {customAlert.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border border-slate-100 text-left">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                {customAlert.isConfirm ? "Action Confirmation" : "Clinical Notification"}
-              </h3>
-              <button 
-                onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))} 
-                className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <p className="text-xs font-medium text-slate-600 mb-8 leading-relaxed whitespace-pre-line">
-              {customAlert.message}
-            </p>
-
-            <div className="flex gap-3">
-              {customAlert.isConfirm ? (
-                <>
-                  <button 
-                    type="button" 
-                    onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))} 
-                    className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs hover:bg-slate-200 transition-colors"
-                  >
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ward Name</label>
+                  <input
+                    type="text"
+                    value={newWardName}
+                    onChange={(e) => setNewWardName(e.target.value)}
+                    placeholder="e.g. ICU Ward 3"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Specialty Category</label>
+                  <input
+                    type="text"
+                    value={newWardSpecialty}
+                    onChange={(e) => setNewWardSpecialty(e.target.value)}
+                    placeholder="e.g. Intensive Care"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setShowCustomWardModal(false)} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200">
                     Cancel
                   </button>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      if (customAlert.onConfirm) customAlert.onConfirm();
-                      setCustomAlert(prev => ({ ...prev, isOpen: false }));
-                    }} 
-                    className={`flex-1 py-3 text-white font-black text-xs rounded-xl transition-colors ${
-                      customAlert.message.toLowerCase().includes("delete") 
-                        ? "bg-rose-600 hover:bg-rose-700" 
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    {customAlert.message.toLowerCase().includes("delete") ? "Confirm Delete" : "Confirm Action"}
+                  <button onClick={handleAddCustomWard} className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700">
+                    Save Ward
                   </button>
-                </>
-              ) : (
-                <button 
-                  type="button" 
-                  onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))} 
-                  className="w-full py-3 bg-blue-600 text-white font-black text-xs rounded-xl hover:bg-blue-700 transition-colors"
-                >
-                  Acknowledge
-                </button>
-              )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
+        {/* Custom Medicine Modal */}
+        {showCustomMedicineModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-extrabold text-slate-800 text-base">Register Custom Medicine</h3>
+                <button onClick={() => setShowCustomMedicineModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Medicine Name / Formula</label>
+                  <input
+                    type="text"
+                    value={newMedicineName}
+                    onChange={(e) => setNewMedicineName(e.target.value)}
+                    placeholder="e.g. Paracetamol 500mg"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setShowCustomMedicineModal(false)} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200">
+                    Cancel
+                  </button>
+                  <button onClick={handleAddCustomMedicine} className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700">
+                    Save Medicine
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Lab Modal */}
+        {showCustomLabModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-extrabold text-slate-800 text-base">Register Custom Diagnostic Test</h3>
+                <button onClick={() => setShowCustomLabModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Diagnostic Test Name</label>
+                  <input
+                    type="text"
+                    value={newLabTestName}
+                    onChange={(e) => setNewLabTestName(e.target.value)}
+                    placeholder="e.g. Serum Electrolytes"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setShowCustomLabModal(false)} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200">
+                    Cancel
+                  </button>
+                  <button onClick={handleAddCustomLabTest} className="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700">
+                    Save Test Profile
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Alert Modal */}
+        {customAlert.isOpen && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
+              <p className="text-sm font-bold text-slate-800 mb-6">{customAlert.message}</p>
+              <div className="flex justify-center gap-3">
+                {customAlert.isConfirm ? (
+                  <>
+                    <button
+                      onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))}
+                      className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (customAlert.onConfirm) customAlert.onConfirm();
+                        setCustomAlert(prev => ({ ...prev, isOpen: false }));
+                      }}
+                      className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700"
+                    >
+                      Confirm
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setCustomAlert(prev => ({ ...prev, isOpen: false }))}
+                    className="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700"
+                  >
+                    OK
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
     </div>
   );
 };
