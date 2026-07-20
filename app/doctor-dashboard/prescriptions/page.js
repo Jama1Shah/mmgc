@@ -360,9 +360,14 @@ const Prescriptions = () => {
       const targetLabPrescription = p.labPrescription || p.appointmentId?.labPrescription;
 
       if (targetLabStatus === 'Completed' && targetLabPrescription) {
-        String(targetLabPrescription).split(',').forEach(name => {
-          const trimmed = name.trim();
-          if (trimmed) names.add(trimmed.toLowerCase());
+        String(targetLabPrescription).split(',').forEach(rawEntry => {
+          const trimmedEntry = rawEntry.trim();
+          if (!trimmedEntry) return;
+          // The admitted-patient workflow stores entries as "TestName (date)" —
+          // strip that trailing annotation so it still matches the plain catalog name.
+          const dateSuffixMatch = trimmedEntry.match(/^(.*)\s\([^)]+\)$/);
+          const cleanName = dateSuffixMatch ? dateSuffixMatch[1].trim() : trimmedEntry;
+          if (cleanName) names.add(cleanName.toLowerCase());
         });
       }
     });
