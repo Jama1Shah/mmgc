@@ -115,6 +115,14 @@ export default function UserManagement() {
     const method = editingUser ? 'PUT' : 'POST';
     let bodyData = { ...userData, isVerified };
 
+    // The Department field only renders in the form when role === 'Doctor'.
+    // For every other role it's never submitted, but the backend's Zod
+    // schema requires a non-empty dept string, so make sure we still send
+    // a fallback value here to satisfy that validation.
+    if (selectedRole !== 'Doctor') {
+      bodyData.dept = 'General';
+    }
+
     if (editingUser) {
       bodyData.id = editingUser._id;
       // 🛡️ CRITICAL SECURITY FIX: Prevent sending blank passwords on updates
