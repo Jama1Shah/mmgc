@@ -438,7 +438,7 @@ export async function DELETE(req) {
 
       // Update the associated appointment status so auto-sync won't recreate the deleted invoice
       await Appointment.findByIdAndUpdate(deletedInvoice.appointmentId, {
-        $set: { status: 'Pending', billPaid: false }
+        $set: { status: 'Completed', billPaid: true }
       });
     }
 

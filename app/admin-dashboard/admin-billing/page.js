@@ -132,7 +132,7 @@ export default function AdminBillingPage() {
     if (loading || appointments.length === 0 || labTests.length === 0) return;
 
     async function syncAndValidateInvoices() {
-      const completedAppts = appointments.filter(appt => appt.status === 'Bill Pending' || appt.status === 'Completed');
+      const completedAppts = appointments.filter(appt => (appt.status === 'Bill Pending' || appt.status === 'Completed') && !appt.billPaid);
       
       for (const appt of completedAppts) {
         const existingInvoice = invoices.find(inv => inv.appointmentId === appt._id);
@@ -223,7 +223,7 @@ export default function AdminBillingPage() {
         if (targetInv && targetInv.appointmentId) {
           setAppointments(prev => prev.map(appt => 
             appt._id === targetInv.appointmentId 
-              ? { ...appt, status: 'Pending', billPaid: false } 
+              ? { ...appt, status: 'Completed', billPaid: true } 
               : appt
           ));
         }
