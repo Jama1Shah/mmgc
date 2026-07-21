@@ -293,32 +293,47 @@ export async function POST(req) {
     const body = validation.data;
 
     if (body.appointmentId) {
-      // If an invoice already exists for this appointmentId, return it without overwriting its status
-      const existing = await Invoice.findOne({ appointmentId: body.appointmentId });
-      if (existing) {
-        return NextResponse.json(existing, { status: 200 });
-      }
-
       const calculations = await calculateBackendInvoice(body.appointmentId);
       if (calculations) {
         body.totalAmount = calculations.totalAmount;
         body.items = calculations.items;
       }
+
+      // Atomic upsert: if an invoice already exists for this appointmentId it is
+      // returned as-is (its status is never overwritten here); if not, it is
+      // created in the same atomic operation. This closes the race window that
+      // used to exist between "check if it exists" and "create it", which could
+      // otherwise leave two invoice records behind for the same appointment —
+      // the exact scenario that made a deleted/updated invoice appear to
+      // "come back" after a refresh.
+      const newInvoice = await Invoice.findOneAndUpdate(
+        { appointmentId: body.appointmentId },
+        { $setOnInsert: body },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      // Drive side effects off the invoice's actual stored status (not the
+      // request body), so this stays a no-op/idempotent when the invoice
+      // already existed, and only takes effect for a genuinely new invoice.
+      if (newInvoice.status === 'Paid' && newInvoice.patientId) {
+        await User.findByIdAndUpdate(newInvoice.patientId, { status: 'Inactive' });
+      }
+
+      if (newInvoice.appointmentId && newInvoice.status) {
+        const apptStatus = newInvoice.status === 'Paid' ? 'Completed' : 'Bill Pending';
+        const apptBillPaid = newInvoice.status === 'Paid';
+        await Appointment.findByIdAndUpdate(newInvoice.appointmentId, {
+          $set: { status: apptStatus, billPaid: apptBillPaid }
+        });
+      }
+
+      return NextResponse.json(newInvoice, { status: 201 });
     }
 
     const newInvoice = await Invoice.create(body);
 
     if (body.status === 'Paid' && body.patientId) {
       await User.findByIdAndUpdate(body.patientId, { status: 'Inactive' });
-    }
-
-    // Synchronize the base database appointment state automatically
-    if (newInvoice && body.appointmentId && body.status) {
-      const apptStatus = body.status === 'Paid' ? 'Completed' : 'Bill Pending';
-      const apptBillPaid = body.status === 'Paid';
-      await Appointment.findByIdAndUpdate(body.appointmentId, {
-        $set: { status: apptStatus, billPaid: apptBillPaid }
-      });
     }
 
     return NextResponse.json(newInvoice, { status: 201 });
@@ -354,6 +369,11 @@ export async function PUT(req) {
         updateData.totalAmount = calculations.totalAmount;
         updateData.items = calculations.items;
       }
+
+      // Remove any duplicate invoice records left over for this appointment
+      // (e.g. from before this fix) so a stale duplicate with an outdated
+      // status can't resurface on the next fetch after we update this one.
+      await Invoice.deleteMany({ appointmentId, _id: { $ne: id } });
     }
     
     const updatedInvoice = await Invoice.findByIdAndUpdate(
@@ -362,7 +382,13 @@ export async function PUT(req) {
       { new: true }
     );
 
-    if (updatedInvoice && updateData.status === 'Paid' && updatedInvoice.patientId) {
+    // If the id didn't match any invoice, the update silently did nothing —
+    // surface that instead of returning a false "success" to the client.
+    if (!updatedInvoice) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    if (updateData.status === 'Paid' && updatedInvoice.patientId) {
       await User.findByIdAndUpdate(updatedInvoice.patientId, { status: 'Inactive' });
     }
 
@@ -396,7 +422,20 @@ export async function DELETE(req) {
     const { id } = validation.data;
 
     const deletedInvoice = await Invoice.findByIdAndDelete(id);
-    if (deletedInvoice && deletedInvoice.appointmentId) {
+
+    // If nothing actually matched `id`, don't report success — the old code
+    // returned 200 here regardless, so the UI removed the row locally while
+    // the record (and any duplicate) stayed in the database and came back
+    // on the next refresh.
+    if (!deletedInvoice) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    if (deletedInvoice.appointmentId) {
+      // Clean up any duplicate invoice records left over for this appointment
+      // so a stale duplicate can't reappear on the next fetch.
+      await Invoice.deleteMany({ appointmentId: deletedInvoice.appointmentId });
+
       // Update the associated appointment status so auto-sync won't recreate the deleted invoice
       await Appointment.findByIdAndUpdate(deletedInvoice.appointmentId, {
         $set: { status: 'Pending', billPaid: false }
