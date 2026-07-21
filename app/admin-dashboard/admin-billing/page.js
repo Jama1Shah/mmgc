@@ -67,12 +67,13 @@ export default function AdminBillingPage() {
   const fetchInvoices = async () => {
     setLoading(true);
     try {
+      let fetchedAppts = [];
       // Fetch appointments for reference ID matching
       try {
         const apptRes = await fetch('/api/appointments');
         if (apptRes.ok) {
           const apptData = await apptRes.json();
-          setAppointments(Array.isArray(apptData) ? apptData : []);
+          fetchedAppts = Array.isArray(apptData) ? apptData : [];
         }
       } catch (apptErr) {
         console.error("Admin Fetch Appointments Error:", apptErr);
@@ -113,6 +114,8 @@ export default function AdminBillingPage() {
           setInvoices([]);
         }
       }
+      // Set appointments after fetching invoices to avoid state synchronization race condition
+      setAppointments(fetchedAppts);
     } catch (err) {
       console.error("Admin Fetch Error:", err);
     } finally {
@@ -126,7 +129,7 @@ export default function AdminBillingPage() {
 
   // Automatically sync and validate invoices to align correctly with billing staff dashboard counts
   useEffect(() => {
-    if (appointments.length === 0 || labTests.length === 0) return;
+    if (loading || appointments.length === 0 || labTests.length === 0) return;
 
     async function syncAndValidateInvoices() {
       const completedAppts = appointments.filter(appt => appt.status === 'Bill Pending' || appt.status === 'Completed');
@@ -169,7 +172,7 @@ export default function AdminBillingPage() {
 
     syncAndValidateInvoices();
     // 🛡️ REFIXTURE: Track the complete object arrays directly to prevent stale closure cycles during runtime mutations
-  }, [appointments, invoices, labTests, wards]);
+  }, [loading, appointments, invoices, labTests, wards]);
 
   // Handle Status Update (PUT)
   const handleUpdateStatus = async (invoiceId, newStatus) => {
@@ -207,6 +210,7 @@ export default function AdminBillingPage() {
   // Handle Permanent Database Deletion (DELETE)
   const handleDeleteInvoice = async (invoiceId) => {
     try {
+      const targetInv = invoices.find(inv => inv._id === invoiceId);
       const res = await fetch('/api/billing', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -216,6 +220,13 @@ export default function AdminBillingPage() {
       if (res.ok) {
         // Remove from UI state instantly
         setInvoices(prev => prev.filter(inv => inv._id !== invoiceId));
+        if (targetInv && targetInv.appointmentId) {
+          setAppointments(prev => prev.map(appt => 
+            appt._id === targetInv.appointmentId 
+              ? { ...appt, status: 'Pending', billPaid: false } 
+              : appt
+          ));
+        }
         setDeleteConfirmId(null);
         setSelectedInvoice(null);
       } else {

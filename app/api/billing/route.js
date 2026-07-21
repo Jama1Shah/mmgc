@@ -293,6 +293,12 @@ export async function POST(req) {
     const body = validation.data;
 
     if (body.appointmentId) {
+      // If an invoice already exists for this appointmentId, return it without overwriting its status
+      const existing = await Invoice.findOne({ appointmentId: body.appointmentId });
+      if (existing) {
+        return NextResponse.json(existing, { status: 200 });
+      }
+
       const calculations = await calculateBackendInvoice(body.appointmentId);
       if (calculations) {
         body.totalAmount = calculations.totalAmount;
@@ -300,16 +306,7 @@ export async function POST(req) {
       }
     }
 
-    let newInvoice;
-    if (body.appointmentId) {
-      newInvoice = await Invoice.findOneAndUpdate(
-        { appointmentId: body.appointmentId },
-        { $set: body },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    } else {
-      newInvoice = await Invoice.create(body);
-    }
+    const newInvoice = await Invoice.create(body);
 
     if (body.status === 'Paid' && body.patientId) {
       await User.findByIdAndUpdate(body.patientId, { status: 'Inactive' });
@@ -398,7 +395,14 @@ export async function DELETE(req) {
     }
     const { id } = validation.data;
 
-    await Invoice.findByIdAndDelete(id);
+    const deletedInvoice = await Invoice.findByIdAndDelete(id);
+    if (deletedInvoice && deletedInvoice.appointmentId) {
+      // Update the associated appointment status so auto-sync won't recreate the deleted invoice
+      await Appointment.findByIdAndUpdate(deletedInvoice.appointmentId, {
+        $set: { status: 'Pending', billPaid: false }
+      });
+    }
+
     return NextResponse.json({ message: "Invoice successfully deleted from database record." });
   } catch (error) {
     console.error("Billing DELETE Error:", error);
