@@ -18,6 +18,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [isVerified, setIsVerified] = useState(true);
+  const [selectedRole, setSelectedRole] = useState('Doctor');
 
   // Custom Modal States
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: null });
@@ -80,6 +81,7 @@ export default function UserManagement() {
     setEditingUser(null);
     setShowPassword(false);
     setIsVerified(true);
+    setSelectedRole('Doctor');
   };
 
   // --- DYNAMIC DEPARTMENT LOGIC ---
@@ -99,6 +101,7 @@ export default function UserManagement() {
     setEditingUser(user);
     setShowPassword(false);
     setIsVerified(user.isVerified ?? false);
+    setSelectedRole(user.role || 'Doctor');
     setIsModalOpen(true);
   };
 
@@ -207,7 +210,7 @@ export default function UserManagement() {
               <p className="text-slate-500 mt-1">Full control over staff roles and patient access levels.</p>
             </div>
             <button 
-              onClick={() => { setEditingUser(null); setShowPassword(false); setIsVerified(true); setIsModalOpen(true); }}
+              onClick={() => { setEditingUser(null); setShowPassword(false); setIsVerified(true); setSelectedRole('Doctor'); setIsModalOpen(true); }}
               className="w-full md:w-auto bg-[#357DF9] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 font-semibold hover:bg-blue-600 transition-all shadow-lg shadow-blue-100"
             >
               <UserPlus size={18} /> Add New User
@@ -319,28 +322,30 @@ export default function UserManagement() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</label>
-                    <select name="role" defaultValue={editingUser?.role || "Doctor"} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm">
+                    <select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm">
                       {roles.slice(1).map(role => <option key={role} value={role}>{role}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</label>
-                  <input 
-                    name="dept" 
-                    list="dept-options" 
-                    required 
-                    defaultValue={editingUser?.dept || ""} 
-                    placeholder="Type or select dept"
-                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm"
-                  />
-                  <datalist id="dept-options">
-                    {dynamicDepartments.map(dept => (
-                      <option key={dept} value={dept} />
-                    ))}
-                  </datalist>
-                </div>
+                {selectedRole === 'Doctor' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</label>
+                    <input 
+                      name="dept" 
+                      list="dept-options" 
+                      required 
+                      defaultValue={editingUser?.dept || ""} 
+                      placeholder="Type or select dept"
+                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm"
+                    />
+                    <datalist id="dept-options">
+                      {dynamicDepartments.map(dept => (
+                        <option key={dept} value={dept} />
+                      ))}
+                    </datalist>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
