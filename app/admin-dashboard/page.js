@@ -322,7 +322,12 @@ export default function UserManagement() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</label>
-                    <select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm">
+                    <select
+                      name="role"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm"
+                    >
                       {roles.slice(1).map(role => <option key={role} value={role}>{role}</option>)}
                     </select>
                   </div>
