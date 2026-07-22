@@ -173,43 +173,34 @@ export default function HomePage() {
     );
 }
 
-/* DATA - Kept exactly as provided */
+/* SHARED ICON OBJECT */
+const defaultIcons = {
+    icon: '/mmgc-svg.svg',
+    shortcut: '/mmgc-svg.svg',
+    apple: '/mmgc-svg.svg',
+};
+
+/* DATA */
 const features = [
     {
         title: "Multi-role access control",
         desc: "Admins, doctors, nurses, lab staff, billing staff and patients with secure permissions.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "Comprehensive medical records",
         desc: "Complete patient history, diagnoses, and prescriptions.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "HIPAA compliant security",
         desc: "Enterprise-grade security for patient data protection.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "Real-time updates",
         desc: "Instant synchronization across all departments.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
 ];
 
@@ -217,47 +208,27 @@ const roles = [
     {
         title: "Doctors",
         desc: "Manage patient records and prescriptions.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "Nurses",
         desc: "Monitor patient care and vital signs.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "Lab Staff",
         desc: "Upload and manage test results.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "Billing Staff",
         desc: "Seamlessly handle invoices and payments.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
         title: "Patients",
         desc: "Access personal health records.",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
 ];
 
@@ -265,26 +236,16 @@ const stats = [
     {
         value: "2,847 patients",
         label: "Active in system",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        icons: defaultIcons,
     },
     {
-        value: "12,483 records", label: "Medical records managed",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        value: "12,483 records",
+        label: "Medical records managed",
+        icons: defaultIcons,
     },
     {
-        value: "100% secure", label: "HIPAA compliant",
-        icons: {
-            icon: '/mmgc-svg.svg',
-            shortcut: '/mmgc-svg.svg',
-            apple: '/mmgc-svg.svg',
-        },
+        value: "100% secure",
+        label: "HIPAA compliant",
+        icons: defaultIcons,
     },
 ];
