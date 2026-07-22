@@ -77,7 +77,11 @@ export default function HomePage() {
                                 className="p-6 border flex flex-col rounded-xl bg-white shadow hover:shadow-lg transition-shadow"
                             >
                                 <div className="flex items-center gap-3 mb-2">
-                                    {item.icon}
+                                    <img 
+                                        src={item.icons.icon} 
+                                        alt={item.title} 
+                                        className="w-6 h-6 object-contain" 
+                                    />
                                     <h3 className="text-xl font-semibold">
                                         {item.title}
                                     </h3>
@@ -105,7 +109,11 @@ export default function HomePage() {
                             {roles.map((role, i) => (
                                 <li key={i} className="group">
                                     <div className="flex items-center gap-2 mb-1">
-                                        {role.icon}
+                                        <img 
+                                            src={role.icons.icon} 
+                                            alt={role.title} 
+                                            className="w-5 h-5 object-contain" 
+                                        />
                                         <p className="font-semibold text-gray-800">{role.title}</p>
                                     </div>
                                     <p className="text-sm text-muted-foreground group-hover:text-gray-600 transition-colors">
@@ -121,7 +129,11 @@ export default function HomePage() {
                         {stats.map((item, i) => (
                             <div key={i} className="bg-white flex flex-col p-6 rounded-xl shadow-md hover:translate-x-2 transition-transform">
                                 <div className="flex items-center gap-2 mb-1">
-                                    {item.icon}
+                                    <img 
+                                        src={item.icons.icon} 
+                                        alt={item.label} 
+                                        className="w-5 h-5 object-contain" 
+                                    />
                                     <p className="font-bold text-lg text-gray-800">{item.value}</p>
                                 </div>
                                 <p className="text-sm text-muted-foreground">{item.label}</p>
