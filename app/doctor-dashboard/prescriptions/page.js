@@ -632,6 +632,7 @@ const Prescriptions = () => {
                     <>
                       <input 
                         type="text" 
+                        maxLength={40}
                         value={searchQuery}
                         onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
                         onFocus={() => setShowDropdown(true)}
@@ -672,6 +673,7 @@ const Prescriptions = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Prescription Details</label>
                   <textarea 
                     value={prescriptionDetails}
+                    maxLength={1000}
                     onChange={(e) => setPrescriptionDetails(e.target.value)}
                     placeholder="Enter overall diagnostic findings, special parameters or historical case notes here..." 
                     className="w-full h-32 p-4 bg-slate-50 border border-transparent focus:border-blue-100 focus:bg-white focus:ring-4 focus:ring-blue-500/5 rounded-xl text-sm resize-none transition-all outline-none"
@@ -855,7 +857,7 @@ const Prescriptions = () => {
                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-left text-xs text-slate-600 font-medium leading-relaxed">
                           {editingId === p._id ? (
                             <div className="space-y-2">
-                              <textarea value={editDetails} onChange={(e) => setEditDetails(e.target.value)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none resize-none h-20" />
+                              <textarea maxLength={1000} value={editDetails} onChange={(e) => setEditDetails(e.target.value)} className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none resize-none h-20" />
                               <div className="flex items-center justify-end space-x-2">
                                 <button onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:bg-slate-200 rounded"><X size={14} /></button>
                                 <button onClick={() => handleUpdateRx(p._id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded border border-emerald-100"><Check size={14} /></button>
@@ -962,11 +964,11 @@ const Prescriptions = () => {
             <div className="space-y-4 mb-6">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 ml-1">Ward Name Label</label>
-                <input type="text" value={newWardName} onChange={(e) => setNewWardName(e.target.value)} placeholder="e.g., Ward A, Emergency ICU" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+                <input type="text" maxLength={30} value={newWardName} onChange={(e) => setNewWardName(e.target.value)} placeholder="e.g., Ward A, Emergency ICU" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 ml-1">Clinical Specialty Sector</label>
-                <input type="text" value={newWardSpecialty} onChange={(e) => setNewWardSpecialty(e.target.value)} placeholder="e.g., General Medicine, Pediatrics" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+                <input type="text" maxLength={40} value={newWardSpecialty} onChange={(e) => setNewWardSpecialty(e.target.value)} placeholder="e.g., General Medicine, Pediatrics" className="w-full p-3.5 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
               </div>
             </div>
             <div className="flex gap-3">
@@ -984,7 +986,7 @@ const Prescriptions = () => {
             <h3 className="text-md font-extrabold text-slate-900 mb-4">Register New Medicine Formula</h3>
             <div className="mb-4">
               <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Compound Description Title</label>
-              <input type="text" value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g., Cap Amoxicillin 500mg" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+              <input type="text" maxLength={30} value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g., Cap Amoxicillin 500mg" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => { setShowCustomMedicineModal(false); setNewMedicineName(""); }} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold rounded-xl">Cancel</button>
@@ -1001,7 +1003,7 @@ const Prescriptions = () => {
             <h3 className="text-md font-extrabold text-slate-900 mb-4">Register Diagnostic Panel Test</h3>
             <div className="mb-4">
               <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Lab Test Label Title</label>
-              <input type="text" value={newLabTestName} onChange={(e) => setNewLabTestName(e.target.value)} placeholder="e.g., Serum Electrolytes Panel" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
+              <input type="text" maxLength={40} value={newLabTestName} onChange={(e) => setNewLabTestName(e.target.value)} placeholder="e.g., Serum Electrolytes Panel" className="w-full p-3 bg-slate-50 rounded-xl text-xs font-medium outline-none" />
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => { setShowCustomLabModal(false); setNewLabTestName(""); }} className="flex-1 py-2.5 bg-slate-100 text-xs font-bold rounded-xl">Cancel</button>

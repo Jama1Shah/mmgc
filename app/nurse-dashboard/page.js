@@ -904,6 +904,7 @@ export default function MasterNurseDashboard() {
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-0.5">Heart Rate (bpm)</label>
                   <input 
                     type="text"
+                    maxLength={3}
                     value={vitalsModal.hr}
                     onChange={(e) => setVitalsModal(prev => ({ ...prev, hr: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-slate-800 outline-none focus:ring-2 focus:ring-blue-600"
@@ -913,6 +914,7 @@ export default function MasterNurseDashboard() {
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-0.5">Temperature (°F)</label>
                   <input 
                     type="text"
+                    maxLength={10}
                     value={vitalsModal.temp}
                     onChange={(e) => setVitalsModal(prev => ({ ...prev, temp: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-slate-800 outline-none focus:ring-2 focus:ring-blue-600"
@@ -925,6 +927,7 @@ export default function MasterNurseDashboard() {
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-0.5">Saturation SpO2 (%)</label>
                   <input 
                     type="text"
+                    maxLength={3}
                     value={vitalsModal.spo2}
                     onChange={(e) => setVitalsModal(prev => ({ ...prev, spo2: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-slate-800 outline-none focus:ring-2 focus:ring-blue-600"
@@ -934,6 +937,7 @@ export default function MasterNurseDashboard() {
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-0.5">Blood Pressure (mmHg)</label>
                   <input 
                     type="text"
+                    maxLength={10}
                     value={vitalsModal.bp}
                     onChange={(e) => setVitalsModal(prev => ({ ...prev, bp: e.target.value }))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono text-slate-800 outline-none focus:ring-2 focus:ring-blue-600"

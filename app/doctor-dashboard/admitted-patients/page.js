@@ -564,7 +564,7 @@ export default function DoctorAdmittedDashboard() {
                 <div className="relative">
                   <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
                   <input 
-                    type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                    type="text" maxLength={30} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search allocated beds..."
                     className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-transparent rounded-xl focus:bg-white focus:border-blue-500 outline-none font-medium"
                   />
@@ -888,6 +888,7 @@ export default function DoctorAdmittedDashboard() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Manually Typed Prescription Notes</label>
               <textarea
                 value={dischargeRxModal.notes}
+                maxLength={1000}
                 onChange={(e) => setDischargeRxModal(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Type free-form discharge instructions, dosages, or care notes here, just like on the Prescriptions page..."
                 className="w-full h-24 p-3.5 bg-slate-50 border border-transparent focus:border-blue-100 focus:bg-white focus:ring-4 focus:ring-blue-500/5 rounded-xl text-sm resize-none transition-all outline-none"
@@ -975,7 +976,7 @@ export default function DoctorAdmittedDashboard() {
             <h3 className="text-md font-extrabold text-slate-900 mb-4">Register New Medicine Formula</h3>
             <div className="mb-4">
               <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1.5">Compound Description Title</label>
-              <input type="text" value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g., Cap Amoxicillin 500mg" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-500" />
+              <input type="text" maxLength={30} value={newMedicineName} onChange={(e) => setNewMedicineName(e.target.value)} placeholder="e.g., Cap Amoxicillin 500mg" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-500" />
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => { setShowCustomMedicineModal(false); setNewMedicineName(""); }} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 text-xs font-bold rounded-xl border border-slate-200 transition-colors">Cancel</button>

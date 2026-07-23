@@ -242,6 +242,7 @@ export default function UserManagement() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text" 
+                maxLength={50}
                 placeholder="Search by name or email..."
                 className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-[#357DF9]/20 outline-none transition-all"
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -326,7 +327,7 @@ export default function UserManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Name</label>
-                    <input name="name" required defaultValue={editingUser?.name || ""} type="text" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm" placeholder="Enter Full Name" />
+                    <input name="name" required maxLength={50} defaultValue={editingUser?.name || ""} type="text" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm" placeholder="Enter Full Name" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</label>
@@ -350,6 +351,7 @@ export default function UserManagement() {
                       required 
                       defaultValue={editingUser?.dept || ""} 
                       placeholder="Type or select dept"
+                      maxLength={30}
                       className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm"
                     />
                     <datalist id="dept-options">
@@ -362,7 +364,7 @@ export default function UserManagement() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
-                  <input name="email" required defaultValue={editingUser?.email || ""} type="email" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm" placeholder="example@mmgc.com" />
+                  <input name="email" maxLength={50} required defaultValue={editingUser?.email || ""} type="email" className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-[#357DF9]/20 outline-none text-sm" placeholder="example@mmgc.com" />
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">

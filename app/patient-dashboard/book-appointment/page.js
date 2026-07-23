@@ -417,6 +417,7 @@ const BookingForm = () => {
                                 <label className="text-sm font-semibold text-slate-600 ml-1">Reason for Visit</label>
                                 <textarea
                                     name="reason"
+                                    maxLength={500}
                                     value={bookingDetails.reason}
                                     placeholder="Short description detailing your update or symptoms..."
                                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 h-24 outline-none resize-none"

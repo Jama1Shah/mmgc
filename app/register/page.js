@@ -159,6 +159,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       name="firstName"
+                      maxLength={20}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                       placeholder="John"
@@ -171,6 +172,7 @@ export default function RegisterPage() {
                     <input
                       type="text"
                       name="lastName"
+                      maxLength={20}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                       placeholder="Doe"
@@ -185,6 +187,7 @@ export default function RegisterPage() {
                   <input
                     type="email"
                     name="email"
+                    maxLength={40}
                     required
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     placeholder="name@company.com"

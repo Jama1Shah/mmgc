@@ -451,6 +451,7 @@ const LabStaffDashboard = () => {
                                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Diagnostic Report Findings / Text Notes</label>
                                                 <textarea
                                                   rows={3}
+                                                  maxLength={600}
                                                   value={(labNotes[order.id] && labNotes[order.id][index]) || ""}
                                                   onChange={(e) => {
                                                     const currentOrderNotes = labNotes[order.id] || {};

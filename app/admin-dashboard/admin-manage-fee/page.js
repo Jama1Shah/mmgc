@@ -458,6 +458,7 @@ export default function AdminManagementPage() {
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Ward Name / Identifier</label>
                       <input
                         type="text"
+                        maxLength="20"
                         placeholder="e.g. ICU Wing A, Ward 4"
                         className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                         value={wardForm.name}
@@ -468,6 +469,7 @@ export default function AdminManagementPage() {
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Medical Specialty Category</label>
                       <input
                         type="text"
+                        maxlength="20"
                         placeholder="e.g. Cardiology, Pediatrics"
                         className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                         value={wardForm.specialty}
@@ -531,6 +533,7 @@ export default function AdminManagementPage() {
                                   {isEditingWard ? (
                                     <input 
                                       type="text"
+                                      maxLength="20"
                                       className="border border-slate-300 rounded-lg p-1 w-full text-sm focus:ring-2 focus:ring-blue-500"
                                       value={editWardForm.name}
                                       onChange={(e) => setEditWardForm({ ...editWardForm, name: e.target.value })}
@@ -543,6 +546,7 @@ export default function AdminManagementPage() {
                                   {isEditingWard ? (
                                     <input 
                                       type="text"
+                                      maxLength="20"
                                       className="border border-slate-300 rounded-lg p-1 w-full text-sm focus:ring-2 focus:ring-blue-500"
                                       value={editWardForm.specialty}
                                       onChange={(e) => setEditWardForm({ ...editWardForm, specialty: e.target.value })}
@@ -642,6 +646,7 @@ export default function AdminManagementPage() {
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Lab Panel Name</label>
                       <input
                         type="text"
+                        maxlength="20"
                         placeholder="e.g. Complete Blood Count (CBC)"
                         className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                         value={labForm.name}

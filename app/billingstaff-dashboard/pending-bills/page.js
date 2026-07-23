@@ -343,6 +343,7 @@ export default function PendingInvoicesPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input 
                   type="text" 
+                  maxLength={30}
                   placeholder="Search invoice or patient..." 
                   className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   value={searchQuery}

@@ -427,6 +427,7 @@ export default function PaymentRecordsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input 
                   type="text" 
+                  maxLength={50}
                   placeholder="Quick search..." 
                   className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64"
                   value={searchQuery}
@@ -464,6 +465,7 @@ export default function PaymentRecordsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
+              maxLength={50}
               placeholder="Search Ref ID or Patient..." 
               className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={searchQuery}

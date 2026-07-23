@@ -299,6 +299,7 @@ const DoctorDashboard = () => {
             <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
             <input 
               type="text" 
+              maxLength={40}
               placeholder="Search workflow matrix..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -471,6 +472,7 @@ const DoctorDashboard = () => {
               <div className="space-y-2 mb-4">
                 <textarea
                   value={noteInput}
+                  maxLength={600}
                   onChange={(e) => setNoteInput(e.target.value)}
                   placeholder="Draft medical notes here..."
                   className="w-full h-24 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/10 focus:bg-white resize-none outline-none transition-all"
