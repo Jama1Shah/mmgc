@@ -3,10 +3,12 @@ import mmgc_db from '@/lib/mmgc_db';
 import Medicine from '@/models/Medicine';
 import { medicineSchema } from '@/schemas/medicine';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await mmgc_db();
-    const list = await Medicine.find({}).sort({ name: 1 });
+    const list = await Medicine.find({}).sort({ name: 1 }).lean();
     return NextResponse.json(list);
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

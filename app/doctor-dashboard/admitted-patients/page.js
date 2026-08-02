@@ -123,7 +123,7 @@ export default function DoctorAdmittedDashboard() {
       
       const [userRes, medRes, labRes] = await Promise.all([
         fetch(`/api/users?email=${encodeURIComponent(userEmail)}`),
-        fetch('/api/medicines'),
+        fetch('/api/medicines', { cache: 'no-store' }),
         fetch('/api/lab-tests')
       ]);
 
@@ -646,7 +646,7 @@ export default function DoctorAdmittedDashboard() {
                         <select value={chosenMedicine} onChange={(e) => setChosenMedicine(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Medicine...</option>
                             {Array.isArray(medicinesList) && medicinesList.map((m, idx) => {
-                              const medName = typeof m === 'string' ? m : (m.name || m.title || m.medicineName || '');
+                              const medName = typeof m === 'string' ? m : (m?.name || m?.title || m?.medicineName || '');
                               const medId = typeof m === 'object' && m ? (m._id || m.id || idx) : idx;
                               return <option key={medId} value={medName}>{medName}</option>;
                             })}
@@ -926,7 +926,7 @@ export default function DoctorAdmittedDashboard() {
               >
                 <option value="">Select Medicine...</option>
                 {Array.isArray(medicinesList) && medicinesList.map((m, idx) => {
-                  const medName = typeof m === 'string' ? m : (m.name || m.title || m.medicineName || '');
+                  const medName = typeof m === 'string' ? m : (m?.name || m?.title || m?.medicineName || '');
                   const medId = typeof m === 'object' && m ? (m._id || m.id || idx) : idx;
                   return <option key={medId} value={medName}>{medName}</option>;
                 })}
@@ -1008,4 +1008,4 @@ export default function DoctorAdmittedDashboard() {
       )}
     </div>
   );
-} 
+}
