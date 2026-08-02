@@ -1008,4 +1008,4 @@ export default function DoctorAdmittedDashboard() {
       )}
     </div>
   );
-}
+} 
