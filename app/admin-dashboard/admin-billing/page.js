@@ -315,7 +315,7 @@ export default function AdminBillingPage() {
                     <th className="px-6 py-4">Patient Profile</th>
                     <th className="px-6 py-4">Total Charge</th>
                     <th className="px-6 py-4">Payment Status</th>
-                    <th className="px-6 py-4 text-center">Administrative Management Actions</th>
+                    <th className="px-6 py-4 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
