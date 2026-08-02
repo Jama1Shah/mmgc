@@ -293,6 +293,12 @@ export async function POST(req) {
     const body = validation.data;
 
     if (body.appointmentId) {
+      // 🛡️ CRITICAL FIX: Ensure permanently deleted bills are never recreated by blocking the POST completely
+      const targetAppt = await Appointment.findById(body.appointmentId);
+      if (targetAppt && targetAppt.billDeleted) {
+        return NextResponse.json({ error: "Invoice permanently deleted by admin and cannot be resurrected." }, { status: 400 });
+      }
+
       const calculations = await calculateBackendInvoice(body.appointmentId);
       if (calculations) {
         body.totalAmount = calculations.totalAmount;
@@ -436,9 +442,9 @@ export async function DELETE(req) {
       // so a stale duplicate can't reappear on the next fetch.
       await Invoice.deleteMany({ appointmentId: deletedInvoice.appointmentId });
 
-      // Update the associated appointment status so auto-sync won't recreate the deleted invoice
+      // 🛡️ CRITICAL FIX: Append the billDeleted boolean flag permanently to the appointment context 
       await Appointment.findByIdAndUpdate(deletedInvoice.appointmentId, {
-        $set: { status: 'Completed', billPaid: true }
+        $set: { status: 'Completed', billPaid: true, billDeleted: true }
       });
     }
 
