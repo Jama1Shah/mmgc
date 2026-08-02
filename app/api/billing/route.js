@@ -113,6 +113,9 @@ export default function UserManagement() {
     const userData = Object.fromEntries(formData);
     
     const method = editingUser ? 'PUT' : 'POST';
+    // FIX: Target dynamic route if editing to resolve 405 Method Not Allowed
+    const endpoint = editingUser ? `/api/users/${editingUser._id}` : '/api/users';
+    
     let bodyData = { ...userData, isVerified };
 
     if (editingUser) {
@@ -124,7 +127,7 @@ export default function UserManagement() {
     }
 
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch(endpoint, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyData),
@@ -158,7 +161,8 @@ export default function UserManagement() {
       message: "Are you sure you want to delete this account? This process cannot be undone.",
       onConfirm: async () => {
         try {
-          const res = await fetch('/api/users', {
+          // FIX: Append ID to the endpoint to resolve 405 Method Not Allowed
+          const res = await fetch(`/api/users/${id}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id }),
