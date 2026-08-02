@@ -6,7 +6,6 @@ import {
   Menu,
   TrendingUp,
   BanknoteCheck,
-  Trash2,
   Edit3,
   Search,
   RefreshCw,
@@ -27,11 +26,9 @@ export default function AdminBillingPage() {
   // Modals & Action States
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Custom Matching UI Modals States
   const [customAlert, setCustomAlert] = useState({ isOpen: false, message: '' });
-  const [customConfirm, setCustomConfirm] = useState({ isOpen: false, message: '', onConfirm: null });
 
   // Handle Enter/Esc keyboard control for Alert Modal
   useEffect(() => {
@@ -45,23 +42,6 @@ export default function AdminBillingPage() {
     window.addEventListener('keydown', handleAlertKeyDown);
     return () => window.removeEventListener('keydown', handleAlertKeyDown);
   }, [customAlert.isOpen]);
-
-  // Handle Enter/Esc keyboard control for Confirm Modal
-  useEffect(() => {
-    if (!customConfirm.isOpen) return;
-    const handleConfirmKeyDown = (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (customConfirm.onConfirm) customConfirm.onConfirm();
-        setCustomConfirm({ isOpen: false, message: '', onConfirm: null });
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setCustomConfirm({ isOpen: false, message: '', onConfirm: null });
-      }
-    };
-    window.addEventListener('keydown', handleConfirmKeyDown);
-    return () => window.removeEventListener('keydown', handleConfirmKeyDown);
-  }, [customConfirm.isOpen, customConfirm.onConfirm]);
 
   // Fetch all invoices from the database
   const fetchInvoices = async () => {
@@ -205,37 +185,6 @@ export default function AdminBillingPage() {
       console.error("Failed to update status:", err);
     } finally {
       setIsUpdating(false);
-    }
-  };
-
-  // Handle Permanent Database Deletion (DELETE)
-  const handleDeleteInvoice = async (invoiceId) => {
-    try {
-      const targetInv = invoices.find(inv => inv._id === invoiceId);
-      const res = await fetch('/api/billing', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: invoiceId })
-      });
-
-      if (res.ok) {
-        // Remove from UI state instantly
-        setInvoices(prev => prev.filter(inv => inv._id !== invoiceId));
-        if (targetInv && targetInv.appointmentId) {
-          // 🛡️ CRITICAL FIX: Instantly inject the billDeleted local state to ensure the auto-sync algorithm skips this block 
-          setAppointments(prev => prev.map(appt => 
-            appt._id === targetInv.appointmentId 
-              ? { ...appt, status: 'Completed', billPaid: true, billDeleted: true } 
-              : appt
-          ));
-        }
-        setDeleteConfirmId(null);
-        setSelectedInvoice(null);
-      } else {
-        setCustomAlert({ isOpen: true, message: "Failed to delete record from database." });
-      }
-    } catch (err) {
-      console.error("Database deletion error:", err);
     }
   };
 
@@ -397,7 +346,7 @@ export default function AdminBillingPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-3">
+                          <div className="flex items-center justify-center">
                             <button
                               onClick={() => setSelectedInvoice(inv)}
                               className="p-2 text-slate-500 hover:text-[#357DF9] hover:bg-blue-50 rounded-lg transition-colors"
@@ -405,31 +354,6 @@ export default function AdminBillingPage() {
                             >
                               <Edit3 size={15} />
                             </button>
-                            
-                            {deleteConfirmId === inv._id ? (
-                              <div className="flex items-center gap-1.5 animate-fadeIn">
-                                <button 
-                                  onClick={() => handleDeleteInvoice(inv._id)}
-                                  className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-black uppercase tracking-wider hover:bg-red-700"
-                                >
-                                  Confirm Destroy
-                                </button>
-                                <button 
-                                  onClick={() => setDeleteConfirmId(null)}
-                                  className="p-1 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setDeleteConfirmId(inv._id)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete permanently from database"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -513,20 +437,8 @@ export default function AdminBillingPage() {
             {/* Bottom Panel Actions */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
               <button
-                onClick={() => {
-                  setCustomConfirm({
-                    isOpen: true,
-                    message: "Confirm action: This destroys this record permanently from the database.",
-                    onConfirm: () => handleDeleteInvoice(selectedInvoice._id)
-                  });
-                }}
-                className="px-4 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-1.5"
-              >
-                <Trash2 size={13} /> Delete Document
-              </button>
-              <button
                 onClick={() => setSelectedInvoice(null)}
-                className="flex-1 bg-white text-slate-600 border border-slate-200 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors"
+                className="w-full bg-white text-slate-600 border border-slate-200 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors"
               >
                 Done / Exit
               </button>
@@ -550,36 +462,6 @@ export default function AdminBillingPage() {
             >
               Dismiss (Enter)
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Custom UI Matching Confirm Modal */}
-      {customConfirm.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-sm w-full shadow-xl border border-slate-100 p-6 space-y-4">
-            <div className="flex items-center gap-3 text-red-500">
-              <AlertTriangle size={20} />
-              <h3 className="font-bold text-slate-800 text-sm">Confirm Permanent Action</h3>
-            </div>
-            <p className="text-slate-600 text-xs font-medium">{customConfirm.message}</p>
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => setCustomConfirm({ isOpen: false, message: '', onConfirm: null })}
-                className="flex-1 bg-white text-slate-600 border border-slate-200 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors"
-              >
-                Cancel (Esc)
-              </button>
-              <button
-                onClick={() => {
-                  if (customConfirm.onConfirm) customConfirm.onConfirm();
-                  setCustomConfirm({ isOpen: false, message: '', onConfirm: null });
-                }}
-                className="flex-1 bg-red-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-red-700 transition-colors shadow-sm"
-              >
-                Confirm (Enter)
-              </button>
-            </div>
           </div>
         </div>
       )}

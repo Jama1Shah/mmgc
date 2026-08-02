@@ -7,7 +7,7 @@ import Ward from '@/models/Ward';
 import LabTest from '@/models/LabTest';
 import mongoose from 'mongoose';
 // Importing the security schemas
-import { PostInvoiceSchema, PutInvoiceSchema, DeleteInvoiceSchema } from '@/schemas/billing';
+import { PostInvoiceSchema, PutInvoiceSchema } from '@/schemas/billing';
 
 // Force Next.js to execute this route dynamically on every request to prevent stale build-time caching
 export const dynamic = 'force-dynamic';
@@ -305,22 +305,12 @@ export async function POST(req) {
         body.items = calculations.items;
       }
 
-      // Atomic upsert: if an invoice already exists for this appointmentId it is
-      // returned as-is (its status is never overwritten here); if not, it is
-      // created in the same atomic operation. This closes the race window that
-      // used to exist between "check if it exists" and "create it", which could
-      // otherwise leave two invoice records behind for the same appointment —
-      // the exact scenario that made a deleted/updated invoice appear to
-      // "come back" after a refresh.
       const newInvoice = await Invoice.findOneAndUpdate(
         { appointmentId: body.appointmentId },
         { $setOnInsert: body },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      // Drive side effects off the invoice's actual stored status (not the
-      // request body), so this stays a no-op/idempotent when the invoice
-      // already existed, and only takes effect for a genuinely new invoice.
       if (newInvoice.status === 'Paid' && newInvoice.patientId) {
         await User.findByIdAndUpdate(newInvoice.patientId, { status: 'Inactive' });
       }
@@ -376,9 +366,6 @@ export async function PUT(req) {
         updateData.items = calculations.items;
       }
 
-      // Remove any duplicate invoice records left over for this appointment
-      // (e.g. from before this fix) so a stale duplicate with an outdated
-      // status can't resurface on the next fetch after we update this one.
       await Invoice.deleteMany({ appointmentId, _id: { $ne: id } });
     }
     
@@ -388,8 +375,6 @@ export async function PUT(req) {
       { new: true }
     );
 
-    // If the id didn't match any invoice, the update silently did nothing —
-    // surface that instead of returning a false "success" to the client.
     if (!updatedInvoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
@@ -411,46 +396,5 @@ export async function PUT(req) {
   } catch (error) {
     console.error("Billing PUT Error:", error);
     return NextResponse.json({ error: "Failed to update invoice" }, { status: 500 });
-  }
-}
-
-// 4. DELETE: Remove an existing invoice record
-export async function DELETE(req) {
-  try {
-    await mmgc_db();
-    const rawBody = await req.json();
-
-    // Secure payload structure using Zod validation
-    const validation = DeleteInvoiceSchema.safeParse(rawBody);
-    if (!validation.success) {
-      return NextResponse.json({ error: "Validation Error", details: validation.error.format() }, { status: 400 });
-    }
-    const { id } = validation.data;
-
-    const deletedInvoice = await Invoice.findByIdAndDelete(id);
-
-    // If nothing actually matched `id`, don't report success — the old code
-    // returned 200 here regardless, so the UI removed the row locally while
-    // the record (and any duplicate) stayed in the database and came back
-    // on the next refresh.
-    if (!deletedInvoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
-    }
-
-    if (deletedInvoice.appointmentId) {
-      // Clean up any duplicate invoice records left over for this appointment
-      // so a stale duplicate can't reappear on the next fetch.
-      await Invoice.deleteMany({ appointmentId: deletedInvoice.appointmentId });
-
-      // 🛡️ CRITICAL FIX: Append the billDeleted boolean flag permanently to the appointment context 
-      await Appointment.findByIdAndUpdate(deletedInvoice.appointmentId, {
-        $set: { status: 'Completed', billPaid: true, billDeleted: true }
-      });
-    }
-
-    return NextResponse.json({ message: "Invoice successfully deleted from database record." });
-  } catch (error) {
-    console.error("Billing DELETE Error:", error);
-    return NextResponse.json({ error: "Failed to delete invoice" }, { status: 500 });
   }
 }
