@@ -127,10 +127,18 @@ export default function DoctorAdmittedDashboard() {
         fetch('/api/lab-tests')
       ]);
 
-      if (medRes.ok) setMedicinesList(await medRes.json());
+      if (medRes.ok) {
+        const medData = await medRes.json();
+        const list = Array.isArray(medData) 
+          ? medData 
+          : (medData.data || medData.medicines || medData.list || []);
+        setMedicinesList(list);
+      }
+
       if (labRes.ok) {
         const labData = await labRes.json();
-        setLabsCatalog(labData.map(t => ({ _id: t._id, testName: t.description })));
+        const list = Array.isArray(labData) ? labData : (labData.data || labData.tests || []);
+        setLabsCatalog(list.map(t => ({ _id: t._id || t.id, testName: t.description || t.testName || t.name })));
       }
 
       let docName = "Staff Doctor";
@@ -311,8 +319,13 @@ export default function DoctorAdmittedDashboard() {
       });
       const resData = await response.json();
       if (response.ok && resData.success) {
-        setMedicinesList(prev => [...prev, resData.data].sort((a, b) => a.name.localeCompare(b.name)));
-        setChosenMedicine(resData.data.name);
+        const newMed = resData.data || { name: newMedicineName };
+        setMedicinesList(prev => [...prev, newMed].sort((a, b) => {
+          const nameA = typeof a === 'string' ? a : (a.name || '');
+          const nameB = typeof b === 'string' ? b : (b.name || '');
+          return nameA.localeCompare(nameB);
+        }));
+        setChosenMedicine(newMed.name || newMedicineName);
         setNewMedicineName("");
         setShowCustomMedicineModal(false);
         setAlertModal({
@@ -632,7 +645,11 @@ export default function DoctorAdmittedDashboard() {
                     <div className="grid grid-cols-2 gap-2">
                         <select value={chosenMedicine} onChange={(e) => setChosenMedicine(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Select Medicine...</option>
-                            {medicinesList.map(m => <option key={m._id} value={m.name}>{m.name}</option>)}
+                            {Array.isArray(medicinesList) && medicinesList.map((m, idx) => {
+                              const medName = typeof m === 'string' ? m : (m.name || m.title || m.medicineName || '');
+                              const medId = typeof m === 'object' && m ? (m._id || m.id || idx) : idx;
+                              return <option key={medId} value={medName}>{medName}</option>;
+                            })}
                         </select>
                         <select value={chosenTiming} onChange={(e) => setChosenTiming(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none">
                             <option value="">Timing...</option>
@@ -908,7 +925,11 @@ export default function DoctorAdmittedDashboard() {
                 className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none"
               >
                 <option value="">Select Medicine...</option>
-                {medicinesList.map(m => <option key={m._id} value={m.name}>{m.name}</option>)}
+                {Array.isArray(medicinesList) && medicinesList.map((m, idx) => {
+                  const medName = typeof m === 'string' ? m : (m.name || m.title || m.medicineName || '');
+                  const medId = typeof m === 'object' && m ? (m._id || m.id || idx) : idx;
+                  return <option key={medId} value={medName}>{medName}</option>;
+                })}
               </select>
               <select
                 value={dischargeRxModal.timing}
