@@ -132,7 +132,8 @@ export default function AdminBillingPage() {
     if (loading || appointments.length === 0 || labTests.length === 0) return;
 
     async function syncAndValidateInvoices() {
-      const completedAppts = appointments.filter(appt => (appt.status === 'Bill Pending' || appt.status === 'Completed') && !appt.billPaid);
+      // 🛡️ CRITICAL FIX: Block auto-sync process if the appointment is flagged as billDeleted 
+      const completedAppts = appointments.filter(appt => (appt.status === 'Bill Pending' || appt.status === 'Completed') && !appt.billPaid && !appt.billDeleted);
       
       for (const appt of completedAppts) {
         const existingInvoice = invoices.find(inv => inv.appointmentId === appt._id);
@@ -221,9 +222,10 @@ export default function AdminBillingPage() {
         // Remove from UI state instantly
         setInvoices(prev => prev.filter(inv => inv._id !== invoiceId));
         if (targetInv && targetInv.appointmentId) {
+          // 🛡️ CRITICAL FIX: Instantly inject the billDeleted local state to ensure the auto-sync algorithm skips this block 
           setAppointments(prev => prev.map(appt => 
             appt._id === targetInv.appointmentId 
-              ? { ...appt, status: 'Completed', billPaid: true } 
+              ? { ...appt, status: 'Completed', billPaid: true, billDeleted: true } 
               : appt
           ));
         }
