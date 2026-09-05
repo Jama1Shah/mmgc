@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 // Fallback to local development URI only if the environment variable isn't set
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URL;
 const ADMIN_PASSWORD = process.env.INITIAL_ADMIN_PASSWORD;
 
 const UserSchema = new mongoose.Schema({
