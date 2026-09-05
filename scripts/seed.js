@@ -1,4 +1,5 @@
 require('dotenv').config(); // Load environment variables from your .env file
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
