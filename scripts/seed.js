@@ -19,7 +19,7 @@ const User = mongoose.models.User || mongoose.model('User', UserSchema);
 async function createAdmin() {
   try {
     console.log("Connecting to MongoDB database...");
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URL);
     console.log("Database connection established successfully.");
 
     const adminEmail = 'admin@mmgc.com';
