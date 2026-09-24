@@ -1,5 +1,4 @@
 require('dotenv').config(); // Load environment variables from your .env file
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -20,7 +19,7 @@ const User = mongoose.models.User || mongoose.model('User', UserSchema);
 async function createAdmin() {
   try {
     console.log("Connecting to MongoDB database...");
-    await mongoose.connect(MONGODB_URL);
+    await mongoose.connect(MONGODB_URI);
     console.log("Database connection established successfully.");
 
     const adminEmail = 'admin@mmgc.com';
