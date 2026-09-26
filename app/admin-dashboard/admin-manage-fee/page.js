@@ -646,7 +646,7 @@ export default function AdminManagementPage() {
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Lab Panel Name</label>
                       <input
                         type="text"
-                        maxlength="20"
+                        maxLength="20"
                         placeholder="e.g. Complete Blood Count (CBC)"
                         className="w-full border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                         value={labForm.name}
